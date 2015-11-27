@@ -31,11 +31,10 @@ module I2C_Slave_RAMController(
 	reg [7:0]masterRAM[0:31];
 	reg [7:0]slaveRAM[0:31];
 
-	reg [7:0]clearRAMChar;
+	reg [7:0]clearRAMChar = CHAR_SPACE;
 
 	integer i, j;
 	initial begin
-		clearRAMChar = CHAR_SPACE;
 		// ************************** MENU ROM **************************
 		// Initialize RAM with spaces
 		for (i = 0; i < 11; i = i + 1) begin

@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Engineer:			Adrian Reyes
 // Module Name:		I2C_Slave_MenuController
-// Project Name:		I2C_Slave-LCD_Buttons_Switches
+// Project Name:		I2C_Slave-LCD_Menu
 // Target Devices:	SPARTAN 3E
 // Description:		I2C Slave Menu Controller
 //							Module that takes input from user and performs desired
 //							operation
-// Dependencies:
+// Dependencies:		I2C_Slave_RAMController
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Slave_MenuController(
 	output [4:0]lcd_WADD,			// LCD Word Address
@@ -65,17 +65,8 @@ module I2C_Slave_MenuController(
 	reg [3:0]state;							// Current state of the controller
 	reg [2:0]mode;								// Current mode of the controller
 	reg [2:0]subMode;							// Current sub mode of the controller
-	// Rotary Event Reg
-	reg rotary_event_prev;					// The previous rotary event value.
-	// Button Events
-	reg charColumnLeftBtn_prev;			// The previous character column left
-													// button value
-	reg charColumnRightBtn_prev;			// The previous character column right
-													// button value
 	// Display Selection Registers
-	reg [3:0]displayTitle;					// The menu title to display
 	reg [3:0]displayOption;					// The menu option to display
-	reg [3:0]currentDisplayedOption;		// Current option being displayed
 	// LCD registers
 	reg [4:0]lcdAddress;						// The LCD address to write to
 	reg [7:0]lcdData;							// The LCD data to be written
@@ -85,9 +76,6 @@ module I2C_Slave_MenuController(
 													// being edited
 	reg [3:0]currentCharColumn;			// The current character column index
 	reg [3:0]currentCharRow;				// The current character row index
-	reg [4:0]currentDisplayedCharPos;	// The currently displayed position of the
-													// character being edited
-	reg [7:0]currentRAMChar;				// TODO
 	wire [7:0]currentChar;					// The current character based on current
 													// character column and row
 	reg [7:0]currentDisplayedChar;		// The currently displayed character
@@ -107,11 +95,9 @@ module I2C_Slave_MenuController(
 	reg ramWriteReady;						// Flag used to indicate when data is ready
 													// to be written to the selected RAM
 
-	integer i;
 	initial begin
 		state = STATE_REFRESH_LCD_MENU_TITLE;
 		displayOption = MENU_DISPLAY_MASTER;
-		currentDisplayedOption = MENU_DISPLAY_MASTER;
 		currentCharPos = 0;
 		currentCharColumn = 4'b0100;
 		currentCharRow = 4'b0001;
@@ -152,103 +138,24 @@ module I2C_Slave_MenuController(
 	////////////////////////////////////////////////////////////////////////////
 	always@(posedge clk) begin
 		// Check for rotary and button events
-		if (reset || menuBtn || rotary_event) begin
-			if (reset || menuBtn) begin
-				currentCharRow <= 0;
+		if (reset || menuBtn) begin
+			// Reset to home position
+			currentCharPos <= 0;
+			// Reset character column and row index to letter A
+			currentCharColumn <= 4;
+			currentCharRow <= 1;
+			// Return to first menu item on reset only
+			if (reset)
 				displayOption <= MENU_DISPLAY_MASTER;
-				// Reset state to menu refresh
-				state <= STATE_REFRESH_LCD_MENU_TITLE;
-			end
-			else begin
-				if (rotary_event) begin
-					// Check current state and determine what action to take
-					case(state)
-						STATE_WAIT_FOR_SELECTION: begin
-								case(displayOption)
-									MENU_DISPLAY_MASTER: begin
-												// If rotate right
-												if (rotary_left)
-													// Show next option
-													displayOption <= MENU_DISPLAY_RAM;
-												// Else rotate left
-												else
-													// Show previous option
-													displayOption <= MENU_SLAVE_ACTIONS;
-											end
-									MENU_DISPLAY_RAM: begin
-												// If rotate right
-												if (rotary_left)
-													// Show next option
-													displayOption <= MENU_MODIFY_RAM;
-												// Else rotate left
-												else
-													// Show previous option
-													displayOption <= MENU_DISPLAY_MASTER;
-											end
-									MENU_MODIFY_RAM: begin
-												// If rotate right
-												if (rotary_left)
-													// Show next option
-													displayOption <= MENU_CLEAR_RAM;
-												// Else rotate left
-												else
-													// Show previous option
-													displayOption <= MENU_DISPLAY_RAM;
-											end
-									MENU_CLEAR_RAM: begin
-												// If rotate right
-												if (rotary_left)
-													// Show next option
-													displayOption <= MENU_SLAVE_ACTIONS;
-												// Else rotate left
-												else
-													// Show previous option
-													displayOption <= MENU_MODIFY_RAM;
-											end
-									MENU_SLAVE_ACTIONS: begin
-												// If rotate right
-												if (rotary_left)
-													// Show next option
-													displayOption <= MENU_DISPLAY_MASTER;
-												// Else rotate left
-												else
-													// Show previous option
-													displayOption <= MENU_CLEAR_RAM;
-											end
-									MENU_YES: begin
-											// Show next option
-											displayOption <= MENU_NO; end
-									MENU_NO: begin
-											// Show next option
-											displayOption <= MENU_YES; end
-								endcase
-								state <= STATE_REFRESH_LCD_MENU_TITLE; end
-						STATE_MODIFY_RAM_CHAR_POS_SEL: begin
-								// If rotary rotated left
-								if (rotary_left) begin
-									// Increment current character position
-									currentCharPos <= currentCharPos + 1;
-									cursorRight <= 1; end
-								// Otherwise rotary rotated right
-								else begin
-									currentCharPos <= currentCharPos - 1;
-									cursorLeft <= 1; end end
-						STATE_MODIFY_RAM_CHAR_SEL: begin
-								// If rotary rotated left
-								if (rotary_left)
-									// Decrement current character row
-									currentCharRow <= currentCharRow + 1;
-								// Otherwise rotary rotated right
-								else currentCharRow <= currentCharRow - 1; end
-					endcase
-				end
-			end
+			// Refresh menu
+			state <= STATE_REFRESH_LCD_MENU_TITLE;
 		end
 		else begin
-			cursorLeft <= 0;
-			cursorRight <= 0;
-				case(state)
-					STATE_REFRESH_LCD_MENU_TITLE: begin
+			case(state)
+				STATE_REFRESH_LCD_MENU_TITLE:
+						begin
+							// Set the subMode to Menu
+							subMode <= SUBMODE_REFRESH_MENU_TITLE;
 							// Select Menu RAM
 							RAM_RSEL <= RAM_SEL_MENU;
 							// Reset address to first character
@@ -267,11 +174,13 @@ module I2C_Slave_MenuController(
 								MENU_YES: menuSelect <= MENU_ARE_YOU_SURE;
 								MENU_NO: menuSelect <= MENU_ARE_YOU_SURE;
 							endcase
-							// Set the subMode to Menu
-							subMode <= SUBMODE_REFRESH_MENU_TITLE;
 							// Setup LCD data
-							state <= STATE_SETUP_LCD_DATA; end
-					STATE_REFRESH_LCD_MENU_OPTION: begin
+							state <= STATE_SETUP_LCD_DATA;
+						end
+				STATE_REFRESH_LCD_MENU_OPTION:
+						begin
+							// Set the subMode to Menu
+							subMode <= SUBMODE_REFRESH_MENU_OPTION;
 							// Select Menu RAM
 							RAM_RSEL <= RAM_SEL_MENU;
 							// Reset address to first character
@@ -282,21 +191,21 @@ module I2C_Slave_MenuController(
 							lcdStopAddress <= 31;
 							// Select the Menu to display
 							menuSelect <= displayOption;
-							// Set the subMode to Menu
-							subMode <= SUBMODE_REFRESH_MENU_OPTION;
 							// Setup LCD data
-							state <= STATE_SETUP_LCD_DATA; end
-					STATE_SETUP_LCD_DATA: begin
+							state <= STATE_SETUP_LCD_DATA;
+						end
+				STATE_SETUP_LCD_DATA:
+						begin
 							// Perform additional actions based on subMode
 							case(subMode)
-								SUBMODE_MODIFY_RAM_POSITION_SEL:
-										currentDisplayedCharPos <= currentCharPos;
 								SUBMODE_MODIFY_RAM_CHAR_SEL:
 										currentDisplayedChar <= currentChar;
 							endcase
 							// Continue writing to LCD
-							state <= STATE_WRITE_TO_LCD; end
-					STATE_WRITE_TO_LCD: begin
+							state <= STATE_WRITE_TO_LCD;
+						end
+				STATE_WRITE_TO_LCD:
+						begin
 							// If done writing to the display
 							if (lcdAddress == lcdStopAddress) begin
 								case(subMode)
@@ -312,10 +221,10 @@ module I2C_Slave_MenuController(
 									// Wait for menu button press
 									SUBMODE_DISPLAY_SLAVE_RAM:
 											state <= STATE_WAIT_FOR_MENU_PRESS;
-									// Wait for user to move cursor and
-									// choose a character position to edit
+									// Wait for user to choose a character position to edit
 									SUBMODE_MODIFY_RAM_DISPLAY:
 											state <= STATE_MODIFY_RAM_CHAR_POS_SEL;
+									// Wait for user to choose a character
 									SUBMODE_MODIFY_RAM_POSITION_SEL:
 											state <= STATE_MODIFY_RAM_CHAR_POS_SEL;
 									SUBMODE_MODIFY_RAM_CHAR_SEL:
@@ -330,8 +239,10 @@ module I2C_Slave_MenuController(
 								// W is asserted in this state, return to setup LCD
 								// for next write
 								state <= STATE_SETUP_LCD_DATA;
-							end end
-					STATE_WAIT_FOR_SELECTION: begin
+							end
+						end
+				STATE_WAIT_FOR_SELECTION:
+						begin
 							// If the rotary button was pressed
 							if (rotaryBtn) begin
 								// Check which option was selected
@@ -347,12 +258,84 @@ module I2C_Slave_MenuController(
 									// Confirm RAM Clear
 									MENU_YES: state <= STATE_SUBMENU_REDIRECT;
 								endcase
-							end end
-					STATE_WAIT_FOR_MENU_PRESS: begin
+							end
+							else if (rotary_event) begin
+								case(displayOption)
+									MENU_DISPLAY_MASTER:
+											begin
+												// If rotate right
+												if (rotary_left)
+													// Show next option
+													displayOption <= MENU_DISPLAY_RAM;
+												// Else rotate left
+												else
+													// Show previous option
+													displayOption <= MENU_SLAVE_ACTIONS;
+											end
+									MENU_DISPLAY_RAM:
+											begin
+												// If rotate right
+												if (rotary_left)
+													// Show next option
+													displayOption <= MENU_MODIFY_RAM;
+													// Else rotate left
+												else
+													// Show previous option
+													displayOption <= MENU_DISPLAY_MASTER;
+											end
+									MENU_MODIFY_RAM:
+											begin
+												// If rotate right
+												if (rotary_left)
+													// Show next option
+													displayOption <= MENU_CLEAR_RAM;
+												// Else rotate left
+												else
+													// Show previous option
+													displayOption <= MENU_DISPLAY_RAM;
+											end
+									MENU_CLEAR_RAM:
+											begin
+												// If rotate right
+												if (rotary_left)
+													// Show next option
+													displayOption <= MENU_SLAVE_ACTIONS;
+												// Else rotate left
+												else
+													// Show previous option
+													displayOption <= MENU_MODIFY_RAM;
+											end
+									MENU_SLAVE_ACTIONS:
+											begin
+												// If rotate right
+												if (rotary_left)
+													// Show next option
+													displayOption <= MENU_DISPLAY_MASTER;
+												// Else rotate left
+												else
+													// Show previous option
+													displayOption <= MENU_CLEAR_RAM;
+											end
+									MENU_YES:
+											begin
+												// Show next option
+												displayOption <= MENU_NO; end
+												MENU_NO: begin
+												// Show next option
+												displayOption <= MENU_YES;
+											end
+								endcase
+								state <= STATE_REFRESH_LCD_MENU_TITLE;
+							end // End else if rotary_event
+						end
+				STATE_WAIT_FOR_MENU_PRESS:
+						begin
 							// Wait for menu button press. RAM was displayed now
 							// waiting to return to menu
-							if (rotaryBtn) state <= STATE_REFRESH_LCD_MENU_TITLE; end
-					STATE_DISPLAY_MASTER: begin
+							if (rotaryBtn) state <= STATE_REFRESH_LCD_MENU_TITLE;
+						end
+				STATE_DISPLAY_MASTER:
+						begin
 							// Select Master RAM
 							RAM_RSEL <= RAM_SEL_MASTER;
 							// Reset address to first character
@@ -364,8 +347,10 @@ module I2C_Slave_MenuController(
 							// Set subMode to Display Master RAM
 							subMode <= SUBMODE_DISPLAY_MASTER_RAM;
 							// Setup up LCD data to display Master RAM
-							state <= STATE_SETUP_LCD_DATA; end
-					STATE_DISPLAY_RAM: begin
+							state <= STATE_SETUP_LCD_DATA;
+						end
+				STATE_DISPLAY_RAM:
+						begin
 							// Select Slave RAM
 							RAM_RSEL <= RAM_SEL_SLAVE;
 							// Reset address to first character
@@ -377,8 +362,10 @@ module I2C_Slave_MenuController(
 							// Set subMode to Display Slave RAM
 							subMode <= SUBMODE_DISPLAY_SLAVE_RAM;
 							// Setup up LCD data to display Master RAM
-							state <= STATE_SETUP_LCD_DATA; end
-					STATE_MODIFY_RAM: begin
+							state <= STATE_SETUP_LCD_DATA;
+						end
+				STATE_MODIFY_RAM:
+						begin
 							// Select Slave RAM
 							RAM_RSEL <= RAM_SEL_SLAVE;
 							// Reset address to first character
@@ -390,8 +377,10 @@ module I2C_Slave_MenuController(
 							// Set subMode to Display Slave RAM
 							subMode <= SUBMODE_MODIFY_RAM_DISPLAY;
 							// Setup up LCD data to display Master RAM
-							state <= STATE_SETUP_LCD_DATA; end
-					STATE_MODIFY_RAM_CHAR_POS_SEL: begin
+							state <= STATE_SETUP_LCD_DATA;
+						end
+				STATE_MODIFY_RAM_CHAR_POS_SEL:
+						begin
 							// Set the subMode
 							subMode <= SUBMODE_MODIFY_RAM_POSITION_SEL;
 							// Clear write ready flag
@@ -399,8 +388,28 @@ module I2C_Slave_MenuController(
 							// Wait for the rotary button to be pressed indicating
 							// that the user has selected an LCD character position
 							// to edit
-							if (rotaryBtn) state <= STATE_MODIFY_RAM_CHAR_SEL; end
-					STATE_MODIFY_RAM_CHAR_SEL: begin
+							if (rotaryBtn) state <= STATE_MODIFY_RAM_CHAR_SEL;
+							// Check for rotary event
+							if (rotary_event) begin
+								// Rotated left
+								if (rotary_left) begin
+									// Increment current character position
+									currentCharPos <= currentCharPos + 1;
+									cursorRight <= 1;
+								end
+								// Else rotated right
+								else begin
+									currentCharPos <= currentCharPos - 1;
+									cursorLeft <= 1;
+								end
+							end
+							else begin
+								cursorRight <= 0;
+								cursorLeft <= 0;
+							end
+						end
+				STATE_MODIFY_RAM_CHAR_SEL:
+						begin
 							// Set the subMode
 							subMode <= SUBMODE_MODIFY_RAM_CHAR_SEL;
 							// Wait for the rotary button to be pressed indicating
@@ -411,8 +420,36 @@ module I2C_Slave_MenuController(
 								RAM_WADD <= currentCharPos;
 								RAM_DIN <= currentDisplayedChar;
 								ramWriteReady <= 1;
-								state <= STATE_MODIFY_RAM_CHAR_POS_SEL; end
+								state <= STATE_MODIFY_RAM_CHAR_POS_SEL;
+							end
 							else begin
+								if (rotary_event) begin
+									// If rotary rotated left
+									if (rotary_left)
+										// Decrement current character row
+										currentCharRow <= currentCharRow + 1;
+									// Otherwise rotary rotated right
+									else
+										currentCharRow <= currentCharRow - 1;
+								end
+								else begin
+									if (charColumnLeftBtn) begin
+										case(currentCharColumn)
+											4'b0010:	currentCharColumn <= 4'b1111;
+											4'b1010:	currentCharColumn <= 4'b0111;
+											// Decrement current character column
+											default:	currentCharColumn <= currentCharColumn - 1;
+										endcase
+									end
+									else if (charColumnRightBtn) begin
+										case(currentCharColumn)
+											4'b0111:	currentCharColumn <= 4'b1010;
+											4'b1111:	currentCharColumn <= 4'b0010;
+											// Decrement current character column
+											default:	currentCharColumn <= currentCharColumn + 1;
+										endcase
+									end
+								end
 								if (currentDisplayedChar != currentChar) begin
 									// Set the LCD data to first the current character
 									lcdData <= currentChar;
@@ -423,15 +460,19 @@ module I2C_Slave_MenuController(
 									// Setup LCD data
 									state <= STATE_SETUP_LCD_DATA;
 								end
-							end end
-					STATE_CLEAR_RAM_CONFIRM: begin
+							end // End else not rotary button
+						end
+				STATE_CLEAR_RAM_CONFIRM:
+						begin
 							// Set the parent mode
 							mode <= MODE_CLEAR_RAM;
 							// Set display option to YES
 							displayOption <= MENU_YES;
 							// Refresh menu
-							state <= STATE_REFRESH_LCD_MENU_TITLE; end
-					STATE_CLEAR_RAM: begin
+							state <= STATE_REFRESH_LCD_MENU_TITLE;
+						end
+				STATE_CLEAR_RAM:
+						begin
 							// Set sub mode
 							subMode <= SUBMODE_CLEAR_RAM;
 							// Select RAM to be cleared
@@ -439,91 +480,16 @@ module I2C_Slave_MenuController(
 							// Set display option back to main menu
 							displayOption <= MENU_DISPLAY_MASTER;
 							// Refresh display
-							state <= STATE_REFRESH_LCD_MENU_TITLE; end
-					STATE_SUBMENU_REDIRECT: begin
+							state <= STATE_REFRESH_LCD_MENU_TITLE;
+						end
+				STATE_SUBMENU_REDIRECT:
+						begin
 							case(mode)
 								MODE_CLEAR_RAM: state <= STATE_CLEAR_RAM;
-							endcase end
-				endcase
+							endcase
+						end
+			endcase
 		end // End else
 	end
-
-	// Button Events
-	always@(posedge clk) begin
-		// If either reset button or menu button were pressed
-		if (reset || menuBtn) begin
-			// Reset currenty character column index
-			currentCharColumn <= 4'b0010;
-		end
-		else begin
-			// Store current charColumnLeftBtn value
-			charColumnLeftBtn_prev <= charColumnLeftBtn;
-			// If charColumnLeftBtn was previously 0 but is now 1, then button
-			// event has occurred
-			if (charColumnLeftBtn == 1 && charColumnLeftBtn_prev == 0) begin
-				if (state == STATE_MODIFY_RAM_CHAR_SEL) begin
-					case(currentCharColumn)
-						4'b0010:	currentCharColumn <= 4'b1111;
-						4'b1010:	currentCharColumn <= 4'b0111;
-						// Decrement current character column
-						default:	currentCharColumn <= currentCharColumn - 1;
-					endcase
-				end
-			end
-			// Store current charColumnRightBtn value
-			charColumnRightBtn_prev <= charColumnRightBtn;
-			// If charColumnRightBtn was previously 0 but is now 1, then button
-			// event has occurred
-			if (charColumnRightBtn == 1 && charColumnRightBtn_prev == 0) begin
-				if (state == STATE_MODIFY_RAM_CHAR_SEL) begin
-					case(currentCharColumn)
-						4'b0111:	currentCharColumn <= 4'b1010;
-						4'b1111:	currentCharColumn <= 4'b0010;
-						// Decrement current character column
-						default:	currentCharColumn <= currentCharColumn + 1;
-					endcase
-				end
-			end
-		end
-	end
-
-
-
-//	always@(posedge charColumnRightBtn) begin
-//		if (state == STATE_MODIFY_RAM_CHAR_POS_SEL) begin
-//			case(currentCharColumn)
-//				4'b0111:	currentCharColumn <= 4'b1010;
-//				4'b1111:	currentCharColumn <= 4'b0010;
-//				// Increment current character column
-//				default:	currentCharColumn <= currentCharColumn + 1;
-//			endcase
-//		end
-//	end
-//	always@(posedge clk) begin
-//		// Continuously assign values to LCD ports
-//		//assign lcd_WADD = lcdAddress;
-//		//assign lcd_DIN = RAM_DOUT;
-//		//assign lcd_W = state == STATE_WRITE_TO_LCD;
-//
-//		// Display to user  using LEDs the address being edited
-//		//editAddress <= currentCharPos;
-//
-//		case(state) begin
-//			STATE_REFRESH_LCD_MENU_TITLE:
-//					begin
-//						// Select Menu RAM
-//						lcd_WADD <= RAM_RADD;
-//						// Reset address to first character
-//						lcd_DIN <= lcdAddress;
-//					end
-//			STATE_REFRESH_LCD_MENU_OPTION:
-//					begin
-//						// Select Menu RAM
-//						lcd_WADD <= RAM_RADD;
-//						// Reset address to first character
-//						lcd_DIN <= lcdAddress;
-//					end
-//		endcase
-//	end
 
 endmodule
