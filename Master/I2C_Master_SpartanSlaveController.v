@@ -7,41 +7,41 @@
 // Description:     LCDI Controller
 // Dependencies:    EightBitBinaryToBCD
 //////////////////////////////////////////////////////////////////////////////////
-module I2C_Master_Controller(
-	input clk,
-	input reset,
-	output reg W,
+module I2C_Master_SpartanSlaveController(
+	output reg [4:0]RADD,
 	output reg [4:0] WADD,
 	output reg [7:0] DIN,
+	output reg W,
 	output go,
-	input done,
-	input ready,
 	output reg rw,
 	output reg [5:0] N_Byte,
 	output reg [6:0] dev_add,
 	output reg [7:0] dwr_DataWriteReg,
 	output reg [7:0] R_Pointer,
+	input menuRW,
+	input [7:0]RDOUT,
 	input [7:0] drd_lcdData,
-	input ack_e
+	input done,
+	input ready,
+	input ack_e,
+	input clk,
+	input reset
 	);
 
-	reg [4:0] currentState;
+	/////////////////////////////// PARAMETERS //////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
+	// State Parameters
+	parameter STATE_WRITE_SETUP_INITIAL = 0, STATE_WRITE_ASSERT_GO = 1,
+		STATE_WRITE_SEND_NEXT_BYTE = 2, STATE_WRITE_SETUP_NEXT_BYTE = 3;
+
+	reg [4:0] state;
 	reg [7:0] lcdData[0:31];
 	reg [7:0] Confg_R_add;
 	reg [6:0] device_address;
-	reg [7:0] config_first_byte;
-	reg [7:0] config_second_byte;
-	reg [7:0] Temp_R_add;
 	reg [15:0] data;
-	reg [7:0] T;							// The temperature in binary
-
-	// BCD Conversion Variables
-	wire [3:0] BCDDigitHundreds;		// BCD Hundredth's place digit
-	wire [3:0] BCDDigitTens;			// BCD Tenth's place digit
-	wire [3:0] BCDDigitOnes;			// BDC One's place digit
-	wire BCDConversionDone;
-	reg [7:0] BinaryInput;
-	reg EnableBCDConversion;
+	reg slaveWrite;
+	reg slaveWritePrev;
+	reg slaveWriteEvent;
 
 	integer i;
 
@@ -55,78 +55,82 @@ module I2C_Master_Controller(
 		dev_add = 0;
 		dwr_DataWriteReg = 0;
 		R_Pointer = 0;
-		currentState = 0;
+		state = STATE_WRITE_INITIAL_SETUP;
 		Confg_R_add = 8'b00000001;
 		device_address = 7'b1100111;
 		config_first_byte = 8'b11100011;
 		config_second_byte = 8'b00011100;
 		Temp_R_add = 8'b00000101;
-		BinaryInput = 0;
-		EnableBCDConversion = 0;
 		for (i = 0; i < 32; i = i+1) begin
 			lcdData[i] = 8'hFE; // FE = Empty Space
 		end
-		lcdData[0] = 8'h54;		// T
-		lcdData[1] = 8'h65;		// e
-		lcdData[2] = 8'h6D;		// m
-		lcdData[3] = 8'h70;		// p
-		lcdData[4] = 8'h3A;		// :
-		lcdData[9] = 8'hDF;		// Degrees symbol
-		lcdData[10] = 8'h43;		// Character 'C'
 	end
 
-	EightBitBinaryToBCD bcdConversion (
-		.BCDDigitHundreds(BCDDigitHundreds),
-		.BCDDigitTens(BCDDigitTens),
-		.BCDDigitOnes(BCDDigitOnes),
-		.Done(BCDConversionDone),
-		.BinaryInput(BinaryInput),
-		.Enable(EnableBCDConversion),
-		.clk(clk));
-
 	// Put outside the always
-	assign go = (currentState == 1 || currentState == 7);
+	assign go = (currentState == STATE_WRITE_INITIAL_SETUP || currentState == 7);
+
+	always@(posedge clk) begin
+		slaveWritePrev <= slaveWrite;
+		if (slaveWrite == 1 && slaveWritePrev == 0)
+			slaveWriteEvent <= 1;
+		else slaveWriteEvent <= 0;
+	end
 
 	always@(posedge clk) begin
 		if (reset) begin
 			// If resetting go back to state zero
 			currentState <= 0;
-			BinaryInput <= 0;
-			EnableBCDConversion <= 0;
 		end
 		else begin
+			// If change to slave write
+			if (slaveWriteEvent) begin
+				// Send stop signal to master
+
+				// Update state to write
+				state <= STATE_WRITE_SETUP_INITIAL;
+			end
 			case (currentState)
-				0:		begin : Set_Config_Values
+				STATE_WRITE_SETUP_INITIAL:
+						begin
 							if (done) begin
+								// Set to write
 								rw <= 0;
-								N_Byte <= 2;
-								R_Pointer <= Confg_R_add;
+								// Reset byte counter
+								N_Byte <= 32;
+								// Set register begin address
+								R_Pointer <= 0;
+								// Set device address
 								dev_add <= device_address;
-								currentState <= 1;
+								currentState <= STATE_WRITE_ASSERT_GO;
 							end
 						end
-				1:		begin : Assert_Go_For_Configuration
+				STATE_WRITE_ASSERT_GO:
+						begin
 							// Move on to the next state
-							currentState <= 2;
+							currentState <= STATE_WRITE_SEND_NEXT_BYTE;
 						end
-				2:		begin : Write_Sensor_Config_Byte1
+				STATE_WRITE_SEND_NEXT_BYTE:
+						begin : Write_Sensor_Config_Byte1
+							// Wait for master to become ready
 							if (ready) begin
-								dwr_DataWriteReg <= config_first_byte;
-								// Move on to the next state. Skiped three to match value
-								// in the PDF
+								// Set next byte
+								dwr_DataWriteReg <= RDOUT;
+								// Move on to the next state.
 								currentState <= 3;
 							end
 						end
-				3:		begin // Need to wait for done or something
-							if (!ready)
-								currentState <= 4;
-						end
-				4:		begin : Write_Sensor_Config_Byte2
-							if (ready) begin
-								dwr_DataWriteReg <= config_second_byte;
-								currentState <= 5;
+				STATE_WRITE_SETUP_NEXT_BYTE:
+						begin // Need to wait for done or something
+							// If done writing to slave
+							if (RADD == 31)
+								// Start over
+								state <= STATE_WRITE_SETUP_INITIAL;
+							else if (!ready) begin
+								RADD <= RADD + 1;
+								currentState <= STATE_WRITE_SEND_NEXT_BYTE;
 							end
 						end
+
 				5:		begin : Wait_For_Master_Done
 							// Wait for the I2C Master to assert done flag
 							if (done)
@@ -168,13 +172,10 @@ module I2C_Master_Controller(
 							if (done) begin
 								// Start LCD address from begining of text
 								WADD <= 0;
-								BinaryInput <= T;
-								EnableBCDConversion <= 1;
 								currentState <= 12;
 							end
 						end
 				12:	begin : Wait_For_Binary_Conversion_To_Complete
-							EnableBCDConversion <= 0;
 							// Wait for binary temperature T to be converted to BCD so
 							// that we can display it
 							if (BCDConversionDone) begin

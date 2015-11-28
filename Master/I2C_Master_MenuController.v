@@ -9,7 +9,7 @@
 //							operation
 // Dependencies:		I2C_Slave_RAMController
 //////////////////////////////////////////////////////////////////////////////////
-module I2C_Slave_MenuController(
+module I2C_Master_MenuController(
 	output [4:0]lcd_WADD,			// LCD Word Address
 	output [7:0]lcd_DIN,				// LCD Data In
 	output lcd_W,						// LCD Write
@@ -128,7 +128,7 @@ module I2C_Slave_MenuController(
 	assign lcd_W = state == STATE_WRITE_TO_LCD;
 	// Continuously concatenate the current character column and row
 	assign currentChar = {currentCharColumn, currentCharRow};
-	// Continuously assign RAM_W
+	// Continuously assign RAM ports
 	assign RAM_W = (subMode == SUBMODE_MODIFY_RAM_CHAR_SEL) && ramWriteReady;
 	assign RAM_Clear = mode == MODE_CLEAR_RAM && subMode == SUBMODE_CLEAR_RAM;
 	// Continuously assign cursor enable

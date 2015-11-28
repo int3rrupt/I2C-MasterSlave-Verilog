@@ -8,10 +8,17 @@
 // Dependencies:		I2C_Master
 //							I2C_Master_Controller
 //							LCDI
+
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_TM(
 	output [3:0] dataout,
 	output [2:0] control,
+	input rotary_a,				// Push Button Address Increment
+	input rotary_b,				// Push Button Address Decrement
+	input rotary_center,			// Push Button to signal which nibble being written
+	input btn_west,				//
+	input btn_east,
+	input btn_north,
 	inout scl,
 	inout sda,
 	input clk,
@@ -31,7 +38,7 @@ module I2C_Master_TM(
 	wire W;
 	wire [4:0] WADD;
 	wire [7:0] DIN;
-	
+
 	I2C_Master i2cMaster (
 		.go(go),
 		.done(done),
