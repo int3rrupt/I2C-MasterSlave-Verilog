@@ -53,10 +53,10 @@ module I2C_Master_MenuController(
 	// RAM select parameters
 	parameter RAM_SEL_MENU = 2'b00, RAM_SEL_MASTER = 2'b01, RAM_SEL_SLAVE = 2'b10;
 	// Menu parameters
-	parameter MENU_MAIN = 4'b0000, MENU_DISPLAY_MASTER = 4'b0001,
-		MENU_DISPLAY_RAM = 4'b0010, MENU_MODIFY_RAM = 4'b0011,
-		MENU_CLEAR_RAM = 4'b0100, MENU_SLAVE_ACTIONS = 4'b0101,
-		MENU_ARE_YOU_SURE = 4'b0110, MENU_SET_SLAVE_ADDR = 4'b0111,
+	parameter MENU_MAIN = 4'b0000, MENU_DISPLAY_REMOTE = 4'b0001,
+		MENU_DISPLAY_LOCAL = 4'b0010, MENU_MODIFY_LOCAL_RAM = 4'b0011,
+		MENU_CLEAR_LOCAL_RAM = 4'b0100, MENU_I2C_ACTIONS = 4'b0101,
+		MENU_ARE_YOU_SURE = 4'b0110, MENU_SET_LOCAL_ADDR = 4'b0111,
 		MENU_YES = 4'b1000, MENU_NO = 4'b1001;
 
 
@@ -97,15 +97,15 @@ module I2C_Master_MenuController(
 
 	initial begin
 		state = STATE_REFRESH_LCD_MENU_TITLE;
-		displayOption = MENU_DISPLAY_MASTER;
+		displayOption = MENU_DISPLAY_REMOTE;
 		currentCharPos = 0;
 		currentCharColumn = 4'b0100;
 		currentCharRow = 4'b0001;
 	end
 
-	I2C_Slave_RAMController ramController(
+	I2C_RAMController ramController(
 		.RAM_DOUT(RAM_DOUT),
-		.slaveRAM_DOUT(slaveRAM_DOUT),
+		.localRAM_DOUT(localRAM_DOUT),
 		.menuSelect(menuSelect),
 		.RAM_RSEL(RAM_RSEL),
 		.RAM_WSEL(RAM_WSEL),
@@ -114,10 +114,10 @@ module I2C_Master_MenuController(
 		.RAM_DIN(RAM_DIN),
 		.RAM_W(RAM_W),
 		.RAM_Clear(RAM_Clear),
-		.masterRAM_WADD(masterRAM_WADD),
-		.masterRAM_DIN(masterRAM_DIN),
-		.masterRAM_W(masterRAM_W),
-		.slaveRAM_RADD(slaveRAM_RADD),
+		.remoteRAM_WADD(remoteRAM_WADD),
+		.remoteRAM_DIN(remoteRAM_DIN),
+		.remoteRAM_W(remoteRAM_W),
+		.localRAM_RADD(localRAM_RADD),
 		.clk(clk)
 		);
 	////////////////////////////////// ASSIGN ///////////////////////////////////

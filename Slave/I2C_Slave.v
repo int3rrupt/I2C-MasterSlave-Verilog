@@ -8,10 +8,10 @@
 // Dependencies:
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Slave(
-	output reg W,
-	output reg [7:0]addr,
-	output reg [7:0]datar,	// Data Register (Received Data Only?)
-	input [7:0] DOUT,
+	output reg [7:0]RAM_Addr,
+	output reg [7:0]RemoteRAM_DIN,	// Data Register (Received Data Only?)
+	output reg RemoteRAM_W,
+	input [7:0]LocalRAM_DOUT,
 	inout scl,
 	inout sda,
 	input clk,
@@ -36,7 +36,7 @@ module I2C_Slave(
 	initial begin
 		my_addr = 7'b1100111;
 		currentState = 1;
-		datar = 0;
+		RemoteRAM_DIN = 0;
 	end
 
 	I2C_Slave_EdgeFilter sclEdgeFilter(
@@ -96,10 +96,10 @@ module I2C_Slave(
 							// If Number of bits remaining is zero
 							if (Nb == 0) begin
 								// If read data is this slave's address
-								if (datar[7:1] == my_addr) begin
+								if (RemoteRAM_DIN[7:1] == my_addr) begin
 									// Send least significant bit of read data to
 									// Direction Info Reg
-									dir <= datar[0];
+									dir <= RemoteRAM_DIN[0];
 									// Continue
 									currentState <= 3;
 								end
@@ -113,7 +113,7 @@ module I2C_Slave(
 								// Wait for Serial Clock positive edge
 								if (cpe) begin
 									// Append Filtered Serial Data value to Data Reg
-									datar <= {datar[6:0], fsda};
+									RemoteRAM_DIN <= {RemoteRAM_DIN[6:0], fsda};
 									// Decrement Number of bits left to read
 									Nb <= Nb - 1;
 								end
@@ -149,7 +149,7 @@ module I2C_Slave(
 								// Wait for Serial Clock positive edge
 								if (cpe) begin
 									// Append Filtered Serial Data value to Address Reg
-									addr <= {addr[6:0], fsda};
+									RAM_Addr <= {RAM_Addr[6:0], fsda};
 									// Decrement Number of bits left to read
 									Nb <= Nb - 1;
 								end
@@ -193,9 +193,9 @@ module I2C_Slave(
 								// If Number of bits remaining is zero
 								if (Nb == 0) begin
 									// Assert write
-									W <= 1;
+									RemoteRAM_W <= 1;
 									// Increment Register Address reg
-									addr <= addr + 1;
+									RAM_Addr <= RAM_Addr + 1;
 									// Continue
 									currentState <= 9;
 								end
@@ -204,7 +204,7 @@ module I2C_Slave(
 									// Wait for Serial Clock positive edge
 									if (cpe) begin
 										// Append Filtered Serial Data value to Data Reg
-										datar <= {datar[6:0], fsda};
+										RemoteRAM_DIN <= {RemoteRAM_DIN[6:0], fsda};
 										// Decrement Number of bits left to read
 										Nb <= Nb - 1;
 									end
@@ -216,7 +216,7 @@ module I2C_Slave(
 								// Send Acknowledgement by pulling sda down
 								sda_int <= 0;
 								// Clear write
-								W <= 0;
+								RemoteRAM_W <= 0;
 								// Continue
 								currentState <= 10;
 							end
@@ -255,16 +255,16 @@ module I2C_Slave(
 							// If Number of bits remaining is zero
 							if (Nb == 0) begin
 								// If read data is this slave's address
-								if (datar[7:1] == my_addr) begin
+								if (RemoteRAM_DIN[7:1] == my_addr) begin
 									// If Master requests Read operation
-									if (datar[0]) begin
+									if (RemoteRAM_DIN[0]) begin
 										// Store Register Data from RAM into
 										// Transmit Register
-										TXr <= DOUT;
+										TXr <= LocalRAM_DOUT;
 										// Set the number of bits to be transmitted to 8
 										Nb <= 8;
 										// Increment Register Address
-										addr <= addr + 1;
+										RAM_Addr <= RAM_Addr + 1;
 										// Continue
 										currentState <= 13;
 									end
@@ -283,7 +283,7 @@ module I2C_Slave(
 								// Wait for Serial Clock positive edge
 								if (cpe) begin
 									// Append Filtered Serial Data value to Data Reg
-									datar <= {datar[6:0], fsda};
+									RemoteRAM_DIN <= {RemoteRAM_DIN[6:0], fsda};
 									// Decrement Number of bits left to read
 									Nb <= Nb - 1;
 								end
@@ -341,11 +341,11 @@ module I2C_Slave(
 								else begin
 									// Store Register Data from RAM into
 									// Transmit Register
-									TXr <= DOUT;
+									TXr <= LocalRAM_DOUT;
 									// Set the number of bits to be transmitted to 8
 									Nb <= 8;
 									// Increment Register Address
-									addr <= addr + 1;
+									RAM_Addr <= RAM_Addr + 1;
 									// Go back and wait for negative edge of Serial Clock
 									// to begin transmitting
 									currentState <= 13;

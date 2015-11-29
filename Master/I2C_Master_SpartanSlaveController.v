@@ -8,23 +8,25 @@
 // Dependencies:    EightBitBinaryToBCD
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_SpartanSlaveController(
-	output reg [4:0]RADD,
-	output reg [4:0]WADD,
-	output reg [7:0]DIN,
-	output reg W,
-	output go,
-	output reg rw,
-	output reg [5:0] N_Byte,
-	output reg [6:0] dev_add,
-	output reg [7:0] dwr_DataWriteReg,
-	output [7:0] R_Pointer,
-	output reg stop,
-	input menuRWControl,
-	input [7:0]RDOUT,
-	input [7:0] drd_lcdData,
-	input done,
-	input ready,
-	input ack_e,
+	output reg [4:0]RAM_RADD,
+	output reg [4:0]RAM_WADD,
+	output reg [7:0]RAM_DIN,
+	output RAM_W,
+	output Master_Go,
+	output reg Master_RW,
+	output reg [5:0]Master_NumOfBytes,
+	output reg [6:0]Master_SlaveAddr,
+	output reg [7:0]Master_DataWriteReg,
+	output [7:0]Master_SlaveRegAddr,
+	output reg Master_Stop,
+	input Controller_Enable,
+	input Menu_SlaveAddr,
+	input Menu_RWControl,
+	input Master_Done,
+	input Master_Ready,
+	input Master_ACK,
+	input [7:0]Master_ReadData,
+	input [7:0]RAM_RDOUT,
 	input clk,
 	input reset
 	);
@@ -41,9 +43,7 @@ module I2C_Master_SpartanSlaveController(
 		STATE_READ_GET_NEXT_BYTE = 2, STATE_READ_SETUP_NEXT_BYTE = 3;
 
 	reg mode;
-	reg [4:0] state;
-	reg [7:0] lcdData[0:31];
-	reg [7:0] Confg_R_add;
+	reg [4:0]state;
 	reg [6:0] device_address;
 	reg [15:0] data;
 	reg menuRWControlPrev;
@@ -53,99 +53,93 @@ module I2C_Master_SpartanSlaveController(
 
 	initial begin
 		// Reset values
-		W = 0;
-		WADD = 0;
-		DIN = 0;
-		rw = 0;
-		N_Byte = 1;
-		dev_add = 0;
-		dwr_DataWriteReg = 0;
-		R_Pointer = 0;
-		state = STATE_WRITE_INITIAL_SETUP;
+		Master_RW = 0;
+		Master_NumOfBytes = 1;
+		Master_SlaveAddr = 0;
+		Master_DataWriteReg = 0;
+		state = 0;
 		Confg_R_add = 8'b00000001;
 		device_address = 7'b1100111;
-		config_first_byte = 8'b11100011;
-		config_second_byte = 8'b00011100;
-		Temp_R_add = 8'b00000101;
 		for (i = 0; i < 32; i = i+1) begin
 			lcdData[i] = 8'hFE; // FE = Empty Space
 		end
 	end
 
-	assign R_Pointer = menuRWControl ? RADD : WADD;
+	assign Master_SlaveRegAddr = Menu_RWControl ? RAM_RADD : RAM_WADD;
 	// Put outside the always
-	assign go = (currentState == STATE_WRITE_INITIAL_SETUP ||
-						currentState == STATE_READ_ASSERT_GO);
+	assign Master_Go = (state == STATE_WRITE_ASSERT_GO ||
+						state == STATE_READ_ASSERT_GO);
 
-	assign W = mode == MODE_SLAVE_READ && state == STATE_READ_SETUP_NEXT_BYTE;
+	assign RAM_W = mode == MODE_SLAVE_READ && state == STATE_READ_SETUP_NEXT_BYTE;
 
 	// Menu RW Control event watcher
 	always@(posedge clk) begin
-		menuRWControlPrev <= menuRWControl;
-		if ((menuRWControl == 1 && menuRWControlPrev == 0) ||
-				(menuRWControl == 0 && menuRWControlPrev == 1)
+		menuRWControlPrev <= Menu_RWControl;
+		if ((Menu_RWControl == 1 && menuRWControlPrev == 0) ||
+				(Menu_RWControl == 0 && menuRWControlPrev == 1))
 			menuRWControlEvent <= 1;
 		else menuRWControlEvent <= 0;
 	end
 
 	always@(posedge clk) begin
 		if (reset) begin
-			// If resetting go back to state zero
+			// If resetting back to state zero
 			state <= 0;
 		end
-		else begin
+		else if (Controller_Enable) begin
 			// If change to rw from menu controller
 			if (menuRWControlEvent) begin
 				// Change modes
-				mode <= menuRWControl;
+				mode <= Menu_RWControl;
 				// Reset state
 				state <= 0;
-				// Send stop signal to master
-				stop <= 1;
+				// Send Stop signal to master
+				Master_Stop <= 1;
 			end
 			else begin
+				Master_Stop <= 0;
 				case (mode)
 					MODE_SLAVE_WRITE:
 							begin
 								case (state)
 									STATE_WRITE_SETUP_INITIAL:
 											begin
-												if (done) begin
+												if (Master_Done) begin
 													// Set to write
-													rw <= 0;
+													Master_RW <= 0;
 													// Reset byte counter
-													N_Byte <= 32;
+													Master_NumOfBytes <= 32;
 													// Set register begin address
-													RADD <= 0;
+													RAM_RADD <= 0;
 													// Set device address
-													dev_add <= device_address;
-													currentState <= STATE_WRITE_ASSERT_GO;
+													Master_SlaveAddr <= Menu_SlaveAddr;
+													state <= STATE_WRITE_ASSERT_GO;
 												end
 											end
 									STATE_WRITE_ASSERT_GO:
 											begin
 												// Move on to the next state
-												currentState <= STATE_WRITE_SEND_NEXT_BYTE;
+												state <= STATE_WRITE_SEND_NEXT_BYTE;
 											end
 									STATE_WRITE_SEND_NEXT_BYTE:
 											begin
-												// Wait for master to become ready
-												if (ready) begin
+												// Wait for master to become Master_Ready
+												if (Master_Ready) begin
 													// Set next byte
-													dwr_DataWriteReg <= RDOUT;
+													Master_DataWriteReg <= RAM_RDOUT;
 													// Move on to the next state.
-													currentState <= STATE_WRITE_SETUP_NEXT_BYTE;
+													state <= STATE_WRITE_SETUP_NEXT_BYTE;
 												end
 											end
 									STATE_WRITE_SETUP_NEXT_BYTE:
-											begin // Need to wait for done or something
-												// If done writing to slave
-												if (RADD == 31)
+											begin // Need to wait for Master_Done or something
+												// If Master_Done writing to slave
+												if (RAM_RADD == 31)
 													// Start over
 													state <= STATE_WRITE_SETUP_INITIAL;
-												else if (!ready) begin
-													RADD <= RADD + 1;
-													currentState <= STATE_WRITE_SEND_NEXT_BYTE;
+												else if (!Master_Ready) begin
+													RAM_RADD <= RAM_RADD + 1;
+													state <= STATE_WRITE_SEND_NEXT_BYTE;
 												end
 											end
 								endcase
@@ -155,43 +149,43 @@ module I2C_Master_SpartanSlaveController(
 								case (state)
 									STATE_READ_SETUP_INITIAL:
 											begin
-												// Wait for the I2C Master to assert done flag
-												if (done) begin
+												// Wait for the I2C Master to assert Master_Done flag
+												if (Master_Done) begin
 													// Set to read
-													rw <= 1;
+													Master_RW <= 1;
 													// Reset byte counter
-													N_Byte <= 32;
+													Master_NumOfBytes <= 32;
 													// Set register begin address
-													WADD <= 0;
+													RAM_WADD <= 0;
 													// Set device address
-													dev_add <= device_address;
-													currentState <= STATE_READ_ASSERT_GO;
+													Master_SlaveAddr <= Menu_SlaveAddr;
+													state <= STATE_READ_ASSERT_GO;
 												end
 											end
 									STATE_READ_ASSERT_GO:
 											begin
 												// Move on to the next state
-												currentState <= STATE_READ_GET_NEXT_BYTE;
+												state <= STATE_READ_GET_NEXT_BYTE;
 											end
 									STATE_READ_GET_NEXT_BYTE:
 											begin
-												// Wait for master to become ready
-												if (ready) begin
+												// Wait for master to become Master_Ready
+												if (Master_Ready) begin
 													// Get data read from slave
-													DIN <= drd_lcdData
+													RAM_DIN <= Master_ReadData;
 													// Move on to the next state.
-													currentState <= STATE_READ_SETUP_NEXT_BYTE;
+													state <= STATE_READ_SETUP_NEXT_BYTE;
 												end
 											end
 									STATE_READ_SETUP_NEXT_BYTE:
 											begin
-												// If done reading from slave
-												if (WADD == 31)
+												// If Master_Done reading from slave
+												if (RAM_WADD == 31)
 													// Start over
 													state <= STATE_READ_SETUP_INITIAL;
-												else if (!ready) begin
-													WADD <= WADD + 1;
-													currentState <= STATE_READ_GET_NEXT_BYTE;
+												else if (!Master_Ready) begin
+													RAM_WADD <= RAM_WADD + 1;
+													state <= STATE_READ_GET_NEXT_BYTE;
 												end
 											end
 								endcase
