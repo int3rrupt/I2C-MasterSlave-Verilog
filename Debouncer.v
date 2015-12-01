@@ -2,7 +2,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Engineer:			Adrian Reyes
 // Module Name:		Debouncer
-// Project Name:		I2C_Slave-LCD_Buttons_Switches
+// Project Name:		
 // Target Devices:	SPARTAN 3E
 // Description:		Push Button Debouncer
 // Dependencies:		
@@ -12,6 +12,9 @@ module Debouncer(
 	input pb,			// Push button
 	input clk
 	);
+	
+	// Delay Parameter
+	parameter DELAY_7ms = 20'd350_000;
 	
 	reg [19:0]SDC;		// Signal Delay Counter
 	reg dpb;				// Q of first flip flop
@@ -37,7 +40,7 @@ module Debouncer(
 		case(currentState)
 			0:	begin : Button_Pressed_Set_Delay
 					if (spb) begin				// If the button was pressed
-						SDC <= 350000;			// Set Delay of 7ms in clock cycles
+						SDC <= DELAY_7ms;		// Set Delay of 7ms
 						currentState <= 1;	// Continue
 					end
 				end
@@ -54,7 +57,7 @@ module Debouncer(
 				end
 			3:	begin : Button_Depressed_Set_Delay
 					if (!spb) begin			// If button now depressed
-						SDC <= 350000;			// Set Delay of 7ms in clock cycles
+						SDC <= DELAY_7ms;		// Set Delay of 7ms
 						currentState <= 4;	// Continue
 					end
 				end

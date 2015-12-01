@@ -19,6 +19,7 @@ module I2C_Master(
 	input [7:0] R_Pointer,			// Register Pointer (Address)
 	output reg [7:0] drd_lcdData,	// Data to be written to LCD
 	output reg ack_e,
+	input stop,
 	inout scl,
 	inout sda,
 	input clk,

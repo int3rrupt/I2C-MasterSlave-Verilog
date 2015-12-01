@@ -25,26 +25,38 @@ module I2C_Slave_TM(
 	input reset
 	);
 
+	// Buttons
 	wire charColumnLeftBtn;
 	wire charColumnRightBtn;
 	wire menuBtn;
 	wire rotaryBtn;
+	// Rotary
 	wire rotary_event;
 	wire rotary_left;
-	wire enableCursor;
-	wire cursorLeft;
-	wire cursorRight;
-
+	// LCDI
 	wire [4:0]LCD_WADD;
 	wire [7:0]LCD_DIN;
 	wire LCD_W;
+	wire enableCursor;
+	wire cursorLeft;
+	wire cursorRight;
+	wire editAddress;
+	// I2C Controllers
+	wire RemoteRWControl;
+	wire [1:0]enableControllers;
+	// RAM
+	wire [7:0]MultiRAM_DOUT;
 	wire [7:0]LocalRAM_DOUT;
-	wire [7:0]editAddress;
-	wire [7:0]RemoteRAM_WADD;
+	wire [3:0]MenuRAM_Select;
+	wire [1:0]MultiRAM_SEL;
+	wire [4:0]MultiRAM_ADD;
+	wire [7:0]MultiRAM_DIN;
+	wire MultiRAM_W;
+	wire MultiRAM_Clear;
+	wire [4:0]RAM_Addr;
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
-	wire RemoteRWControl;
-
+	
 	Debouncer debouncerPbWest(
 		.E(charColumnLeftBtn),
 		.pb(btn_west),
