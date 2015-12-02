@@ -1,7 +1,16 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Engineer:			Adrian Reyes
+// Module Name:		I2C_RAMController
+// Project Name:		I2C_Slave-LCD_Menu
+// Target Devices:	SPARTAN 3E
+// Description:		I2C RAM Controller
+// Dependencies:
+//////////////////////////////////////////////////////////////////////////////////
 module I2C_RAMController(
 	output reg [7:0]MultiRAM_DOUT,	// RAM data out (Menu Controller)
 	output reg [7:0]LocalRAM_DOUT,	// Local RAM data out (Master read)
-	input [3:0]MenuRAM_Select,			// Menu select
+	input [4:0]MenuRAM_Select,			// Menu select
 	input [1:0]MultiRAM_SEL,			// RAM select
 	input [4:0]MultiRAM_ADD,			// RAM address (Menu Controller)
 	input [7:0]MultiRAM_DIN,			// RAM data in (Menu Controller)
@@ -20,7 +29,9 @@ module I2C_RAMController(
 		MENU_OPTION_CLEAR_LOCAL_RAM = 4, MENU_OPTION_I2C_ACTIONS = 5,
 		MENU_TITLE_I2C_ACTIONS = 6, MENU_TITLE_ARE_YOU_SURE = 7,
 		MENU_OPTION_YES = 8, MENU_OPTION_NO = 9, MENU_OPTION_WRITE_TO_REMOTE = 10,
-		MENU_OPTION_READ_FROM_REMOTE = 11, MENU_OPTION_SET_LOCAL_ADDR = 12;
+		MENU_OPTION_READ_FROM_REMOTE = 11, MENU_OPTION_SET_LOCAL_ADDR = 12,
+		MENU_TITLE_STATUS = 13, MENU_STATUS_WRITING = 14,
+		MENU_STATUS_ACTION_COMPLETE = 15;
 	// Menu RAM select parameters
 	parameter RAM_SEL_MENU = 0, RAM_SEL_REMOTE = 1, RAM_SEL_LOCAL = 2;
 	// Characters
@@ -157,54 +168,87 @@ module I2C_RAMController(
 		menuROM[7][11] = CHAR_E;	// E
 		menuROM[7][12] = CHAR_QUESTION;	// ?
 		// Yes
-		menuROM[8][1] = CHAR_Y;	// Y
-		menuROM[8][2] = CHAR_e;	// e
-		menuROM[8][3] = CHAR_s;	// s
+		menuROM[8][1] = CHAR_Y;		// Y
+		menuROM[8][2] = CHAR_e;		// e
+		menuROM[8][3] = CHAR_s;		// s
 		// No
-		menuROM[9][1] = CHAR_N;	// N
-		menuROM[9][2] = CHAR_o;	// o
+		menuROM[9][1] = CHAR_N;		// N
+		menuROM[9][2] = CHAR_o;		// o
 		// Write To Remote
-		menuROM[10][0] = CHAR_W;		// W
-		menuROM[10][1] = CHAR_r;		// r
-		menuROM[10][2] = CHAR_i;		// i
-		menuROM[10][3] = CHAR_t;		// t
-		menuROM[10][4] = CHAR_e;		// e
-		menuROM[10][6] = CHAR_T;		// T
-		menuROM[10][7] = CHAR_o;		// o
-		menuROM[10][9] = CHAR_R;		// R
+		menuROM[10][0] = CHAR_W;	// W
+		menuROM[10][1] = CHAR_r;	// r
+		menuROM[10][2] = CHAR_i;	// i
+		menuROM[10][3] = CHAR_t;	// t
+		menuROM[10][4] = CHAR_e;	// e
+		menuROM[10][6] = CHAR_T;	// T
+		menuROM[10][7] = CHAR_o;	// o
+		menuROM[10][9] = CHAR_R;	// R
 		menuROM[10][10] = CHAR_e;	// e
 		menuROM[10][11] = CHAR_m;	// m
 		menuROM[10][12] = CHAR_o;	// o
 		menuROM[10][13] = CHAR_t;	// t
 		menuROM[10][14] = CHAR_e;	// e
 		// Read From Remote
-		menuROM[11][0] = CHAR_R;		// R
-		menuROM[11][1] = CHAR_e;		// e
-		menuROM[11][2] = CHAR_a;		// a
-		menuROM[11][3] = CHAR_d;		// d
-		menuROM[11][5] = CHAR_F;		// F
-		menuROM[11][6] = CHAR_r;		// r
-		menuROM[11][7] = CHAR_o;		// o
-		menuROM[11][8] = CHAR_m;		// m
-		menuROM[11][10] = CHAR_R;		// R
-		menuROM[11][11] = CHAR_e;		// e
-		menuROM[11][12] = CHAR_m;		// m
-		menuROM[11][13] = CHAR_o;		// o
-		menuROM[11][14] = CHAR_t;		// t
-		menuROM[11][15] = CHAR_e;		// e
+		menuROM[11][0] = CHAR_R;	// R
+		menuROM[11][1] = CHAR_e;	// e
+		menuROM[11][2] = CHAR_a;	// a
+		menuROM[11][3] = CHAR_d;	// d
+		menuROM[11][5] = CHAR_F;	// F
+		menuROM[11][6] = CHAR_r;	// r
+		menuROM[11][7] = CHAR_o;	// o
+		menuROM[11][8] = CHAR_m;	// m
+		menuROM[11][10] = CHAR_R;	// R
+		menuROM[11][11] = CHAR_e;	// e
+		menuROM[11][12] = CHAR_m;	// m
+		menuROM[11][13] = CHAR_o;	// o
+		menuROM[11][14] = CHAR_t;	// t
+		menuROM[11][15] = CHAR_e;	// e
 		// Set Local Addr
-		menuROM[12][0] = CHAR_S;		// S
-		menuROM[12][1] = CHAR_e;		// e
-		menuROM[12][2] = CHAR_t;		// t
-		menuROM[12][4] = CHAR_L;		// L
-		menuROM[12][5] = CHAR_o;		// o
-		menuROM[12][6] = CHAR_c;		// c
-		menuROM[12][7] = CHAR_a;		// a
-		menuROM[12][8] = CHAR_l;		// l
-		menuROM[12][10] = CHAR_A;		// A
-		menuROM[12][11] = CHAR_d;		// d
-		menuROM[12][12] = CHAR_d;		// d
-		menuROM[12][13] = CHAR_r;		// r
+		menuROM[12][0] = CHAR_S;	// S
+		menuROM[12][1] = CHAR_e;	// e
+		menuROM[12][2] = CHAR_t;	// t
+		menuROM[12][4] = CHAR_L;	// L
+		menuROM[12][5] = CHAR_o;	// o
+		menuROM[12][6] = CHAR_c;	// c
+		menuROM[12][7] = CHAR_a;	// a
+		menuROM[12][8] = CHAR_l;	// l
+		menuROM[12][10] = CHAR_A;	// A
+		menuROM[12][11] = CHAR_d;	// d
+		menuROM[12][12] = CHAR_d;	// d
+		menuROM[12][13] = CHAR_r;	// r
+		// STATUS
+		menuROM[13][0] = CHAR_S;		// S
+		menuROM[13][1] = CHAR_T;		// T
+		menuROM[13][2] = CHAR_A;		// A
+		menuROM[13][3] = CHAR_T;		// T
+		menuROM[13][4] = CHAR_U;		// U
+		menuROM[13][5] = CHAR_S;		// S
+		// Writing...
+		menuROM[14][0] = CHAR_W;		// W
+		menuROM[14][1] = CHAR_r;		// r
+		menuROM[14][2] = CHAR_i;		// i
+		menuROM[14][3] = CHAR_t;		// t
+		menuROM[14][4] = CHAR_i;		// i
+		menuROM[14][5] = CHAR_n;		// n
+		menuROM[14][6] = CHAR_g;		// g
+		menuROM[14][7] = CHAR_Period;	// .
+		menuROM[14][8] = CHAR_Period;	// .
+		menuROM[14][9] = CHAR_Period;	// .
+		// Action Complete
+		menuROM[15][0] = CHAR_A;	// A
+		menuROM[15][1] = CHAR_c;	// c
+		menuROM[15][2] = CHAR_t;	// t
+		menuROM[15][3] = CHAR_i;	// i
+		menuROM[15][4] = CHAR_o;	// o
+		menuROM[15][5] = CHAR_n;	// n
+		menuROM[15][7] = CHAR_C;	// C
+		menuROM[15][8] = CHAR_o;	// o
+		menuROM[15][9] = CHAR_m;	// m
+		menuROM[15][10] = CHAR_p;	// p
+		menuROM[15][11] = CHAR_l;	// l
+		menuROM[15][12] = CHAR_e;	// e
+		menuROM[15][13] = CHAR_t;	// t
+		menuROM[15][14] = CHAR_e;	// e
 	end
 
 	// RAM read

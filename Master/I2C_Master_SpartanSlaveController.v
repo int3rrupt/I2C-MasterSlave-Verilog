@@ -1,11 +1,11 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Engineer:        Adrian Reyes
-// Module Name:     Controller
-// Project Name:    I2C
-// Target Devices:  SPARTAN 3E
-// Description:     LCDI Controller
-// Dependencies:    EightBitBinaryToBCD
+// Engineer:			Adrian Reyes
+// Module Name:		I2C_Master_SpartanSlaveController
+// Project Name:		I2C_Slave-LCD_Menu
+// Target Devices:	SPARTAN 3E
+// Description:		Controller for Spartan 3E slave
+// Dependencies:		
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_SpartanSlaveController(
 	output reg [4:0]RAM_ADD,

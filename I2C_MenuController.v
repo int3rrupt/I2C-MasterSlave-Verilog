@@ -7,7 +7,7 @@
 // Description:		I2C Menu Controller
 //							Module that takes input from user and performs desired
 //							operation
-// Dependencies:		I2C_RAMController
+// Dependencies:
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_MenuController(
 	// LCDI Outputs
@@ -20,7 +20,7 @@ module I2C_MenuController(
 	output reg cursorRight,
 	output [7:0]editAddress,
 	output reg [1:0]enableControllers,// Enable controller bits
-	output reg [3:0]MenuRAM_Select,
+	output reg [4:0]MenuRAM_Select,
 	output reg [1:0]MultiRAM_SEL,
 	output reg [4:0]MultiRAM_ADD,
 	output reg [7:0]MultiRAM_DIN,
@@ -44,12 +44,13 @@ module I2C_MenuController(
 	// I2C Mode
 	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
 	// Parent Mode Parameters
-	parameter MODE_CLEAR_RAM = 0;
+	parameter MODE_CLEAR_RAM = 0, MODE_WRITE_TO_REMOTE = 1;
 	// Sub Mode parameters
 	parameter SUBMODE_REFRESH_MENU_TITLE = 0, SUBMODE_REFRESH_MENU_OPTION = 1,
 		SUBMODE_DISPLAY_REMOTE = 2, SUBMODE_DISPLAY_LOCAL = 3,
 		SUBMODE_MODIFY_LOCAL_RAM_DISPLAY = 4, SUBMODE_MODIFY_LOCAL_RAM_POSITION_SEL = 5,
-		SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL = 6, SUBMODE_CLEAR_LOCAL_RAM = 7;
+		SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL = 6, SUBMODE_CLEAR_LOCAL_RAM = 7,
+		SUBMODE_WRITE_REMOTE_WRITING = 8;
 	// State parameters
 	parameter STATE_REFRESH_LCD_MENU_TITLE = 0,
 		STATE_REFRESH_LCD_MENU_OPTION = 1, STATE_SETUP_LCD_DATA = 2,
@@ -68,17 +69,19 @@ module I2C_MenuController(
 		MENU_OPTION_CLEAR_LOCAL_RAM = 4, MENU_OPTION_I2C_ACTIONS = 5,
 		MENU_TITLE_I2C_ACTIONS = 6, MENU_TITLE_ARE_YOU_SURE = 7,
 		MENU_OPTION_YES = 8, MENU_OPTION_NO = 9, MENU_OPTION_WRITE_TO_REMOTE = 10,
-		MENU_OPTION_READ_FROM_REMOTE = 11, MENU_OPTION_SET_LOCAL_ADDR = 12;
+		MENU_OPTION_READ_FROM_REMOTE = 11, MENU_OPTION_SET_LOCAL_ADDR = 12,
+		MENU_TITLE_STATUS = 13, MENU_STATUS_WRITING = 14,
+		MENU_STATUS_ACTION_COMPLETE = 15;
 	parameter ENABLE_CONTROLLER_SPARTAN_SLAVE = 1, ENABLE_CONTROLLER_TEMP = 2;
 
 	//////////////////////////////// REGISTERS //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	reg i2cMode = I2C_MODE_MASTER;			// I2C Mode
 	reg [3:0]state;							// Current state of the controller
-	reg [2:0]mode;								// Current mode of the controller
-	reg [2:0]subMode;							// Current sub mode of the controller
+	reg [3:0]mode;								// Current mode of the controller
+	reg [3:0]subMode;							// Current sub mode of the controller
 	// Display Selection Registers
-	reg [3:0]displayOption;					// The menu option to display
+	reg [4:0]displayOption;					// The menu option to display
 	// LCD registers
 	reg [4:0]lcdAddress;						// The LCD address to write to
 	reg [7:0]lcdData;							// The LCD data to be written
@@ -149,16 +152,28 @@ module I2C_MenuController(
 							lcdStopAddress <= 15;
 							// Select the Menu Title to display
 							case(displayOption)
-								MENU_OPTION_DISPLAY_REMOTE: MenuRAM_Select <= MENU_TITLE_MAIN;
-								MENU_OPTION_DISPLAY_LOCAL: MenuRAM_Select <= MENU_TITLE_MAIN;
-								MENU_OPTION_MODIFY_LOCAL_RAM: MenuRAM_Select <= MENU_TITLE_MAIN;
-								MENU_OPTION_CLEAR_LOCAL_RAM: MenuRAM_Select <= MENU_TITLE_MAIN;
-								MENU_OPTION_I2C_ACTIONS: MenuRAM_Select <= MENU_TITLE_MAIN;
-								MENU_OPTION_YES: MenuRAM_Select <= MENU_TITLE_ARE_YOU_SURE;
-								MENU_OPTION_NO: MenuRAM_Select <= MENU_TITLE_ARE_YOU_SURE;
-								MENU_OPTION_WRITE_TO_REMOTE: MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
-								MENU_OPTION_READ_FROM_REMOTE: MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
-								MENU_OPTION_SET_LOCAL_ADDR: MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
+								MENU_OPTION_DISPLAY_REMOTE:
+										MenuRAM_Select <= MENU_TITLE_MAIN;
+								MENU_OPTION_DISPLAY_LOCAL:
+										MenuRAM_Select <= MENU_TITLE_MAIN;
+								MENU_OPTION_MODIFY_LOCAL_RAM:
+										MenuRAM_Select <= MENU_TITLE_MAIN;
+								MENU_OPTION_CLEAR_LOCAL_RAM:
+										MenuRAM_Select <= MENU_TITLE_MAIN;
+								MENU_OPTION_I2C_ACTIONS:
+										MenuRAM_Select <= MENU_TITLE_MAIN;
+								MENU_OPTION_YES:
+										MenuRAM_Select <= MENU_TITLE_ARE_YOU_SURE;
+								MENU_OPTION_NO:
+										MenuRAM_Select <= MENU_TITLE_ARE_YOU_SURE;
+								MENU_OPTION_WRITE_TO_REMOTE:
+										MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
+								MENU_OPTION_READ_FROM_REMOTE:
+										MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
+								MENU_OPTION_SET_LOCAL_ADDR:
+										MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
+								MENU_STATUS_WRITING:
+										MenuRAM_Select <= MENU_TITLE_STATUS;
 							endcase
 							// Setup LCD data
 							state <= STATE_SETUP_LCD_DATA;
@@ -213,8 +228,12 @@ module I2C_MenuController(
 									// Wait for user to choose a character
 									SUBMODE_MODIFY_LOCAL_RAM_POSITION_SEL:
 											state <= STATE_MODIFY_LOCAL_RAM_CHAR_POS_SEL;
+									// Continue waiting for user to choose a character
 									SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL:
 											state <= STATE_MODIFY_LOCAL_RAM_CHAR_SEL;
+									// Wait for Master to complete write action
+									SUBMODE_WRITE_REMOTE_WRITING:
+											state <= STATE_WRITE_TO_REMOTE;
 								endcase
 							end
 							else begin
@@ -531,8 +550,18 @@ module I2C_MenuController(
 						end
 				STATE_WRITE_TO_REMOTE:
 						begin
+							if (Controller_Done)
+								state <= 
+							// Set the sub mode
+							subMode <= SUBMODE_WRITE_REMOTE_WRITING;
+							// Set remote RW control to write
 							RemoteRWControl <= 0;
+							// Enable the Spartan 3E Slave controller
 							enableControllers <= ENABLE_CONTROLLER_SPARTAN_SLAVE;
+							// Update display value
+							displayOption <= MENU_STATUS_WRITING;
+							// Refresh display
+							state <= STATE_REFRESH_LCD_MENU_TITLE;
 						end
 			endcase
 		end // End else
