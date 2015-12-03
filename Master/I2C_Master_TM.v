@@ -33,18 +33,6 @@ module I2C_Master_TM(
 	// Rotary
 	wire rotary_event;
 	wire rotary_left;
-	// RAM
-	wire [7:0]RAM_ADD;
-	wire [7:0]MultiRAM_DOUT;
-	wire [7:0]LocalRAM_DOUT;
-	wire [3:0]MenuRAM_Select;
-	wire [1:0]MultiRAM_SEL;
-	wire [4:0]MultiRAM_ADD;
-	wire [7:0]MultiRAM_DIN;
-	wire MultiRAM_W;
-	wire MultiRAM_Clear;
-	wire [7:0]RemoteRAM_DIN;
-	wire RemoteRAM_W;
 	// LCDI
 	wire [4:0]LCD_WADD;
 	wire [7:0]LCD_DIN;
@@ -53,6 +41,18 @@ module I2C_Master_TM(
 	wire cursorLeft;
 	wire cursorRight;
 	wire editAddress;
+	// RAM
+	wire [7:0]RAM_ADD;
+	wire [7:0]MultiRAM_DOUT;
+	wire [7:0]LocalRAM_DOUT;
+	wire [4:0]MenuRAM_Select;
+	wire [1:0]MultiRAM_SEL;
+	wire [4:0]MultiRAM_ADD;
+	wire [7:0]MultiRAM_DIN;
+	wire MultiRAM_W;
+	wire MultiRAM_Clear;
+	wire [7:0]RemoteRAM_DIN;
+	wire RemoteRAM_W;
 	// controller
 	wire Controller_Done;
 	wire [1:0]enableControllers;

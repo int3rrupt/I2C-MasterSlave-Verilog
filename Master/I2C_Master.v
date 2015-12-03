@@ -19,6 +19,7 @@ module I2C_Master(
 	input [7:0] R_Pointer,			// Register Pointer (Address)
 	output reg [7:0] drd_lcdData,	// Data to be written to LCD
 	output reg ack_e,
+	input Master_Enable,
 	input stop,
 	inout scl,
 	inout sda,
@@ -89,7 +90,7 @@ module I2C_Master(
 	assign idle = scl && sda;
 
 	always@(posedge clk) begin
-		if (reset) begin
+		if (reset || !Master_Enable) begin
 			// Interrupt the serial clock
 			scl_int <= 1;
 			// Interrupt the serial data

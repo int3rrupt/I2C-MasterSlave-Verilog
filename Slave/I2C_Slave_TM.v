@@ -24,12 +24,12 @@ module I2C_Slave_TM(
 	input clk,
 	input reset
 	);
-	
+
 	// I2C Mode Parameters
 	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
-	
+
 	// I2C Mode
-	reg I2C_MODE = I2C_MODE_SLAVE;
+	wire I2C_MODE;
 	// Slave Address
 	wire [6:0]SlaveAddr;
 
@@ -49,23 +49,51 @@ module I2C_Slave_TM(
 	wire cursorLeft;
 	wire cursorRight;
 	wire editAddress;
-	// I2C Controllers
-	wire RemoteRWControl;
-	wire [1:0]enableControllers;
-	wire Controller_Done;
 	// RAM
+	wire [7:0]RAM_ADD;
 	wire [7:0]MultiRAM_DOUT;
 	wire [7:0]LocalRAM_DOUT;
-	wire [3:0]MenuRAM_Select;
+	wire [4:0]MenuRAM_Select;
 	wire [1:0]MultiRAM_SEL;
 	wire [4:0]MultiRAM_ADD;
 	wire [7:0]MultiRAM_DIN;
 	wire MultiRAM_W;
 	wire MultiRAM_Clear;
-	wire [4:0]RAM_Addr;
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
+	// I2C Controllers
+	wire RemoteRWControl;
+	wire [1:0]enableControllers;
+	wire Controller_Done;
+	// Master
+	wire Master_Go;
+	wire Master_RW;
+	wire [5:0]Master_NumOfBytes;
+	wire [6:0]Master_SlaveAddr;
+	wire [7:0]Master_DataWriteReg;
+	wire [7:0]Master_SlaveRegAddr;
+	wire Master_Enable;
+	wire Master_Stop;
+	wire Master_Done;
+	wire Master_Ready;
+	wire Master_ACK;
+	wire [7:0]Master_ReadData;
+	wire Master_RemoteRAM_W;
+	wire Master_RAM_ADD;
+	wire Master_RAM_DIN;
+	// Slave
+	wire Slave_Enable;
+	wire Slave_RemoteRAM_W;
+	wire Slave_RAM_ADD;
+	wire Slave_RAM_DIN;
+
+	assign Master_Enable = I2C_MODE == I2C_MODE_MASTER;
+	assign Slave_Enable = I2C_MODE == I2C_MODE_SLAVE;
 	
+	assign RAM_ADD = I2C_MODE == I2C_MODE_MASTER ? Master_RAM_ADD : Slave_RAM_ADD;
+	assign RAM_DIN = I2C_MODE == I2C_MODE_MASTER ? Master_RAM_DIN : Slave_RAM_DIN;
+	assign RemoteRAM_W = I2C_MODE == I2C_MODE_MASTER ? Master_RemoteRAM_W : Slave_RemoteRAM_W;
+
 	Debouncer debouncerPbWest(
 		.E(charColumnLeftBtn),
 		.pb(btn_west),
@@ -95,10 +123,30 @@ module I2C_Slave_TM(
 		.clk(clk)
 		);
 
+	I2C_Master master (
+		.go(Master_Go),
+		.done(Master_Done),
+		.ready(Master_Ready),
+		.rw(Master_RW),
+		.N_Byte(Master_NumOfBytes),
+		.dev_add(Master_SlaveAddr),
+		.dwr_DataWriteReg(Master_DataWriteReg),
+		.R_Pointer(Master_SlaveRegAddr),
+		.drd_lcdData(Master_ReadData),
+		.ack_e(Master_ACK),
+		.Master_Enable(Master_Enable),
+		.stop(Master_Stop),
+		.scl(scl),
+		.sda(sda),
+		.clk(clk),
+		.reset(reset)
+		);
+
 	I2C_Slave slave(
-		.RAM_Addr(RAM_Addr),
-		.RemoteRAM_DIN(RemoteRAM_DIN),
-		.RemoteRAM_W(RemoteRAM_W),
+		.RAM_Addr(Slave_RAM_ADD),
+		.RemoteRAM_DIN(Slave_RemoteRAM_DIN),
+		.RemoteRAM_W(Slave_RemoteRAM_W),
+		.Slave_Enable(Slave_Enable),
 		.LocalRAM_DOUT(LocalRAM_DOUT),
 		.scl(scl),
 		.sda(sda),
@@ -145,11 +193,35 @@ module I2C_Slave_TM(
 		.MultiRAM_DIN(MultiRAM_DIN),
 		.MultiRAM_W(MultiRAM_W),
 		.MultiRAM_Clear(MultiRAM_Clear),
-		.RemoteRAM_WADD(RAM_Addr),
+		.RemoteRAM_WADD(RAM_ADD),
 		.RemoteRAM_DIN(RemoteRAM_DIN),
 		.RemoteRAM_W(RemoteRAM_W),
-		.LocalRAM_RADD(RAM_Addr),
+		.LocalRAM_RADD(RAM_ADD),
 		.clk(clk)
+		);
+
+	I2C_Master_SpartanSlaveController spartanSlaveController(
+		.RAM_ADD(Master_RAM_ADD),
+		.RAM_DIN(Master_RemoteRAM_DIN),
+		.RAM_W(Master_RemoteRAM_W),
+		.Master_Go(Master_Go),
+		.Master_RW(Master_RW),
+		.Master_NumOfBytes(Master_NumOfBytes),
+		.Master_SlaveAddr(Master_SlaveAddr),
+		.Master_DataWriteReg(Master_DataWriteReg),
+		.Master_SlaveRegAddr(Master_SlaveRegAddr),
+		.Master_Stop(Master_Stop),
+		.Controller_Done(Controller_Done),
+		.Controller_Enable(enableControllers[0]),
+		.Menu_SlaveAddr(SlaveAddr),
+		.Menu_RWControl(RemoteRWControl),
+		.Master_Done(Master_Done),
+		.Master_Ready(Master_Ready),
+		.Master_ACK(Master_ACK),
+		.Master_ReadData(Master_ReadData),
+		.RAM_RDOUT(LocalRAM_DOUT),
+		.clk(clk),
+		.reset(reset)
 		);
 
 	LCDI_Menu lcdi(
@@ -163,23 +235,5 @@ module I2C_Slave_TM(
 		.cursorRight(cursorRight),
 		.clk(clk)
 		);
-
-//	always@(posedge rotary_event) begin
-//		if (rotary_left) begin
-//			if (LEDs == 8'b10000000)
-//				LEDs <= 8'b0000001;
-//			else
-//				LEDs <= LEDs << 1;
-//		end
-//		// Otherwise rotary rotate right
-//		else begin
-//			if (LEDs == 8'b00000001)
-//				LEDs <= 8'b10000000;
-//			else
-//				LEDs <= LEDs >> 1;
-//		end
-//	end
-
-
 
 endmodule

@@ -11,6 +11,7 @@ module I2C_Slave(
 	output reg [7:0]RAM_Addr,
 	output reg [7:0]RemoteRAM_DIN,	// Data Register (Received Data Only?)
 	output reg RemoteRAM_W,
+	input Slave_Enable,
 	input [7:0]LocalRAM_DOUT,
 	inout scl,
 	inout sda,
@@ -57,14 +58,13 @@ module I2C_Slave(
 		.reset(reset)
 		);
 
-
 	assign scl = scl_int ? 1'bz : 0;
 	assign sda = sda_int ? 1'bz : 0;
 	assign stop = dpe && fscl;
 	assign start = dne && fscl;
 
 	always@(posedge clk) begin
-		if (reset) begin
+		if (reset || !Slave_Enable) begin
 			currentState <= 1;
 		end
 		else begin
