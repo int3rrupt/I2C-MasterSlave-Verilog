@@ -51,9 +51,10 @@ module I2C_RAMController(
 		CHAR_e = 8'h65, CHAR_l = 8'h6C, CHAR_s = 8'h73, CHAR_z = 8'h7A,
 		CHAR_f = 8'h66, CHAR_m = 8'h6D, CHAR_t = 8'h74,
 		CHAR_g = 8'h67, CHAR_n = 8'h6E, CHAR_u = 8'h75,
-		CHAR_SPACE = 8'h20, CHAR_2 = 8'h32, CHAR_QUESTION = 8'h3F;
+		CHAR_SPACE = 8'h20, CHAR_2 = 8'h32, CHAR_QUESTION = 8'h3F,
+		CHAR_Period = 8'h2E;
 
-	reg [7:0]menuROM[0:12][0:15];					// 16x8x11 Menu ROM
+	reg [7:0]menuROM[0:15][0:15];					// 16x8x11 Menu ROM
 	reg [7:0]remoteRAM[0:31];
 	reg [7:0]localRAM[0:31];
 

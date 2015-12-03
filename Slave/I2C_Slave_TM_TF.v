@@ -98,12 +98,19 @@ module I2C_Slave_TM_TF;
 		#20; rotary_b = 0;
 		#20; rotary_a = 0;
 		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
 		#1500; rotary_b = 1;
 		#20; rotary_a = 1;
 		#20; rotary_b = 0;
 		#20; rotary_a = 0;
 		
-		#1500; rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
 		
 		#2500; rotary_b = 1;
 		#20; rotary_a = 1;
