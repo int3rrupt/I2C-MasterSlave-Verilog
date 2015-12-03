@@ -41,10 +41,6 @@ module I2C_Slave_TM_TF;
 	// Bidirs
 	wire scl;
 	wire sda;
-	
-	// MASTER WIRES
-	wire [3:0] MASTERdataout;
-	wire [2:0] MASTERcontrol;
 
 	// Instantiate the Unit Under Test (UUT)
 	I2C_Slave_TM uut (
@@ -61,16 +57,6 @@ module I2C_Slave_TM_TF;
 		.clk(clk),
 		.reset(reset)
 	);
-	
-	// Instantiate the Master test helper module
-//	I2C_Master_TM master (
-//		.dataout(MASTERdataout),
-//		.control(MASTERcontrol),
-//		.scl(scl),
-//		.sda(sda),
-//		.clk(clk),
-//		.reset(reset)
-//	);
 
 	initial begin
 		// Initialize Inputs
@@ -92,11 +78,19 @@ module I2C_Slave_TM_TF;
 
 		#7001000;
 
-		// Add stimulus here
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
+		// Left Rotate
+		#1500; rotary_a = 1;
+		#20; rotary_b = 1;
 		#20; rotary_a = 0;
+		#20; rotary_b = 0;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500;
 		
 		#1500; rotary_b = 1;
 		#20; rotary_a = 1;

@@ -66,6 +66,8 @@ module I2C_Slave_TM(
 	wire [1:0]enableControllers;
 	wire Controller_Done;
 	// Master
+	wire Master_scl;
+	wire Master_sda;
 	wire Master_Go;
 	wire Master_RW;
 	wire [5:0]Master_NumOfBytes;
@@ -82,10 +84,15 @@ module I2C_Slave_TM(
 	wire Master_RAM_ADD;
 	wire Master_RAM_DIN;
 	// Slave
+	wire Slave_scl;
+	wire Slave_sda;
 	wire Slave_Enable;
 	wire Slave_RemoteRAM_W;
 	wire Slave_RAM_ADD;
 	wire Slave_RAM_DIN;
+	
+	assign scl = I2C_MODE == I2C_MODE_MASTER ? Master_scl : Slave_scl;
+	assign sda = I2C_MODE == I2C_MODE_MASTER ? Master_sda : Slave_sda;
 
 	assign Master_Enable = I2C_MODE == I2C_MODE_MASTER;
 	assign Slave_Enable = I2C_MODE == I2C_MODE_SLAVE;
@@ -136,8 +143,8 @@ module I2C_Slave_TM(
 		.ack_e(Master_ACK),
 		.Master_Enable(Master_Enable),
 		.stop(Master_Stop),
-		.scl(scl),
-		.sda(sda),
+		.scl(Master_scl),
+		.sda(Master_sda),
 		.clk(clk),
 		.reset(reset)
 		);
@@ -148,8 +155,8 @@ module I2C_Slave_TM(
 		.RemoteRAM_W(Slave_RemoteRAM_W),
 		.Slave_Enable(Slave_Enable),
 		.LocalRAM_DOUT(LocalRAM_DOUT),
-		.scl(scl),
-		.sda(sda),
+		.scl(Slave_scl),
+		.sda(Slave_sda),
 		.clk(clk),
 		.reset(reset)
 		);

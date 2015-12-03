@@ -35,6 +35,8 @@ module I2C_Slave(
 	reg [7:0]TXr;				// Transmit Register
 
 	initial begin
+		scl_int = 1;
+		sda_int = 1;
 		my_addr = 7'b1100111;
 		currentState = 1;
 		RemoteRAM_DIN = 0;
