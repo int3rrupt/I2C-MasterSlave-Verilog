@@ -331,13 +331,13 @@ module I2C_RAMController(
 			end
 		end
 	end
-	// Master write
+	// Remote write
 	always@(posedge clk) begin
 		if (RemoteRAM_W) begin
 			remoteRAM[RemoteRAM_WADD] = RemoteRAM_DIN;
 		end
 	end
-	// Slave read
+	// Local read
 	always@(posedge clk) begin
 		LocalRAM_DOUT <= localRAM[LocalRAM_RADD];
 	end

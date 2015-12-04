@@ -54,6 +54,7 @@ module I2C_Master_SpartanSlaveController(
 
 	initial begin
 		// Reset values
+		Controller_Done = 0;
 		state = 0;
 		Master_RW = 1;
 		Master_DataWriteReg = 0;

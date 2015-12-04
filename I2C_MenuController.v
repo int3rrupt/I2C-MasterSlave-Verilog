@@ -133,6 +133,7 @@ module I2C_MenuController(
 		currentCharPos = 0;
 		currentCharColumn = 4'b0100;
 		currentCharRow = 4'b0001;
+		enableControllers = 2'b00;
 	end
 
 	////////////////////////////////// ASSIGN ///////////////////////////////////

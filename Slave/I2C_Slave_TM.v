@@ -50,7 +50,7 @@ module I2C_Slave_TM(
 	wire cursorRight;
 	wire editAddress;
 	// RAM
-	wire [7:0]RAM_ADD;
+	wire [7:0]RemoteLocalRAM_ADD;
 	wire [7:0]MultiRAM_DOUT;
 	wire [7:0]LocalRAM_DOUT;
 	wire [4:0]MenuRAM_Select;
@@ -66,8 +66,10 @@ module I2C_Slave_TM(
 	wire [1:0]enableControllers;
 	wire Controller_Done;
 	// Master
-	wire Master_scl;
-	wire Master_sda;
+	wire Master_scl_out;
+	wire Master_sda_out;
+	wire scl_in;
+	wire sda_in;
 	wire Master_Go;
 	wire Master_RW;
 	wire [5:0]Master_NumOfBytes;
@@ -80,25 +82,36 @@ module I2C_Slave_TM(
 	wire Master_Ready;
 	wire Master_ACK;
 	wire [7:0]Master_ReadData;
+	wire [4:0]Master_RemoteLocalRAM_ADD;
+	wire [7:0]Master_RemoteRAM_DIN;
 	wire Master_RemoteRAM_W;
-	wire Master_RAM_ADD;
-	wire Master_RAM_DIN;
 	// Slave
-	wire Slave_scl;
-	wire Slave_sda;
+	wire Slave_scl_out;
+	wire Slave_sda_out;
+	wire Slave_scl_in;
+	wire Slave_sda_in;
 	wire Slave_Enable;
+	wire [4:0]Slave_RemoteLocalRAM_ADD;
+	wire [7:0]Slave_RemoteRAM_DIN;
 	wire Slave_RemoteRAM_W;
-	wire Slave_RAM_ADD;
-	wire Slave_RAM_DIN;
-	
-	assign scl = I2C_MODE == I2C_MODE_MASTER ? Master_scl : Slave_scl;
-	assign sda = I2C_MODE == I2C_MODE_MASTER ? Master_sda : Slave_sda;
+
+
+
+
+
+
+	//assign scl = I2C_MODE == I2C_MODE_MASTER ? Master_scl_out : Slave_scl_out;
+	//assign sda = I2C_MODE == I2C_MODE_MASTER ? Master_sda_out : Slave_sda_out;
+	//assign scl_in = scl;
+	//assign sda_in = sda;
+	//assign Slave_scl_in = scl;
+	//assign Slave_sda_in = sda;
 
 	assign Master_Enable = I2C_MODE == I2C_MODE_MASTER;
 	assign Slave_Enable = I2C_MODE == I2C_MODE_SLAVE;
-	
-	assign RAM_ADD = I2C_MODE == I2C_MODE_MASTER ? Master_RAM_ADD : Slave_RAM_ADD;
-	assign RAM_DIN = I2C_MODE == I2C_MODE_MASTER ? Master_RAM_DIN : Slave_RAM_DIN;
+
+	assign RemoteLocalRAM_ADD = I2C_MODE == I2C_MODE_MASTER ? Master_RemoteLocalRAM_ADD : Slave_RemoteLocalRAM_ADD;
+	assign RemoteRAM_DIN = I2C_MODE == I2C_MODE_MASTER ? Master_RemoteRAM_DIN : Slave_RemoteRAM_DIN;
 	assign RemoteRAM_W = I2C_MODE == I2C_MODE_MASTER ? Master_RemoteRAM_W : Slave_RemoteRAM_W;
 
 	Debouncer debouncerPbWest(
@@ -141,25 +154,29 @@ module I2C_Slave_TM(
 		.R_Pointer(Master_SlaveRegAddr),
 		.drd_lcdData(Master_ReadData),
 		.ack_e(Master_ACK),
+		.scl_out(Master_scl_out),
+		.sda_out(Master_sda_out),
 		.Master_Enable(Master_Enable),
 		.stop(Master_Stop),
-		.scl(Master_scl),
-		.sda(Master_sda),
+		.scl_in(scl_in),
+		.sda_in(sda_in),
 		.clk(clk),
-		.reset(reset)
+		.reset(reset),
+		.scl(scl),
+		.sda(sda)
 		);
 
-	I2C_Slave slave(
-		.RAM_Addr(Slave_RAM_ADD),
-		.RemoteRAM_DIN(Slave_RemoteRAM_DIN),
-		.RemoteRAM_W(Slave_RemoteRAM_W),
-		.Slave_Enable(Slave_Enable),
-		.LocalRAM_DOUT(LocalRAM_DOUT),
-		.scl(Slave_scl),
-		.sda(Slave_sda),
-		.clk(clk),
-		.reset(reset)
-		);
+//	I2C_Slave slave(
+//		.RAM_Addr(Slave_RemoteLocalRAM_ADD),
+//		.RemoteRAM_DIN(Slave_RemoteRAM_DIN),
+//		.RemoteRAM_W(Slave_RemoteRAM_W),
+//		.Slave_Enable(Slave_Enable),
+//		.LocalRAM_DOUT(LocalRAM_DOUT),
+//		.scl(Slave_scl),
+//		.sda(Slave_sda),
+//		.clk(clk),
+//		.reset(reset)
+//		);
 
 	I2C_MenuController menuController(
 		.LCD_WADD(LCD_WADD),
@@ -200,15 +217,15 @@ module I2C_Slave_TM(
 		.MultiRAM_DIN(MultiRAM_DIN),
 		.MultiRAM_W(MultiRAM_W),
 		.MultiRAM_Clear(MultiRAM_Clear),
-		.RemoteRAM_WADD(RAM_ADD),
+		.RemoteRAM_WADD(RemoteLocalRAM_ADD),
 		.RemoteRAM_DIN(RemoteRAM_DIN),
 		.RemoteRAM_W(RemoteRAM_W),
-		.LocalRAM_RADD(RAM_ADD),
+		.LocalRAM_RADD(RemoteLocalRAM_ADD),
 		.clk(clk)
 		);
 
 	I2C_Master_SpartanSlaveController spartanSlaveController(
-		.RAM_ADD(Master_RAM_ADD),
+		.RAM_ADD(Master_RemoteLocalRAM_ADD),
 		.RAM_DIN(Master_RemoteRAM_DIN),
 		.RAM_W(Master_RemoteRAM_W),
 		.Master_Go(Master_Go),

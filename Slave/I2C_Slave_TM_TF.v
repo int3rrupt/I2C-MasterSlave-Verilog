@@ -43,7 +43,7 @@ module I2C_Slave_TM_TF;
 	wire sda;
 
 	// Instantiate the Unit Under Test (UUT)
-	I2C_Slave_TM uut (
+	I2C_Slave_TM uut_master (
 		.dataout(dataout),
 		.control(control),
 		.btn_west(btn_west),
@@ -57,6 +57,21 @@ module I2C_Slave_TM_TF;
 		.clk(clk),
 		.reset(reset)
 	);
+	
+//	I2C_Slave_TM uut_slave(
+//		.dataout(dataout),
+//		.control(control),
+//		.btn_west(btn_west),
+//		.btn_east(btn_east),
+//		.btn_north(btn_north),
+//		.rotary_center(rotary_center),
+//		.rotary_a(rotary_a),
+//		.rotary_b(rotary_b),
+//		.scl(scl),
+//		.sda(sda),
+//		.clk(clk),
+//		.reset(reset)
+//	);
 
 	initial begin
 		// Initialize Inputs
@@ -90,7 +105,7 @@ module I2C_Slave_TM_TF;
 		#1500;
 		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
 		
-		#1500;
+		#150000000;
 		
 		#1500; rotary_b = 1;
 		#20; rotary_a = 1;

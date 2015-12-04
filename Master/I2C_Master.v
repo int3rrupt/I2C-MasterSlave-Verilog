@@ -19,12 +19,16 @@ module I2C_Master(
 	input [7:0] R_Pointer,			// Register Pointer (Address)
 	output reg [7:0] drd_lcdData,	// Data to be written to LCD
 	output reg ack_e,
+	output scl_out,
+	output sda_out,
 	input Master_Enable,
 	input stop,
-	inout scl,
-	inout sda,
+	input scl_in,
+	input sda_in,
 	input clk,
-	input reset
+	input reset,
+	inout scl,
+	inout sda
 	);
 
 	wire [9:0] count;
@@ -64,7 +68,7 @@ module I2C_Master(
 		scl_int = 1;
 		sda_int = 1;
 		drd_lcdData = 0;
-		done = 0;
+		done = 1;
 		ack_e = 0;
 		currentState = WAITING;
 	end
@@ -79,6 +83,8 @@ module I2C_Master(
 	assign pe = k && (count[9:8] == 2);
 	assign rbit = k && (count[9:8] == 3);
 
+	assign scl_out = (scl_int == 1) ? 1'bz : 0;
+	assign sda_out = (sda_int == 1) ? 1'bz : 0; //(currentState == START) ? 0: 1'bz;// : 0;
 	assign scl = (scl_int == 1) ? 1'bz : 0;
 	assign sda = (sda_int == 1) ? 1'bz : 0;
 	assign waiting = currentState == WAITING;
@@ -132,7 +138,7 @@ module I2C_Master(
 								end
 							end //End WAITING
 				START:	begin : Initiate_Start_Sequence
-								// If we are in read bit segment pull Serial Data down to
+								/*// If we are in read bit segment pull Serial Data down to
 								// initiate START signal
 								if (rbit)
 									sda_int <= 0;
@@ -147,7 +153,8 @@ module I2C_Master(
 										// Move on to Data Address state
 										currentState <= D_ADD;
 									end
-								end
+								end*/
+								sda_int <= 0;
 							end // End START
 				D_ADD:	begin : Send_Device_Address
 								if (wbit) begin
@@ -176,7 +183,7 @@ module I2C_Master(
 								if (pe)
 									scl_int <= 1;
 								else begin
-									// If at read bit segment
+								// If at read bit segment
 									if (rbit) begin
 										// If Serial Data is high set acknowledged flag
 										if (sda != 1'b0)
