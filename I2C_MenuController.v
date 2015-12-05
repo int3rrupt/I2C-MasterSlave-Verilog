@@ -15,7 +15,7 @@ module I2C_MenuController(
 	output [7:0]LCD_DIN,				// LCD Data In
 	output LCD_W,						// LCD Write
 	output reg RemoteRWControl,	// RW Control for remote
-	output reg EnableController,	// Enable controller bits
+	output reg Controller_Enable,	// Enable controller bits
 	output reg [4:0]MenuRAM_Select,
 	output reg [1:0]MultiRAM_SEL,
 	output reg [4:0]MultiRAM_ADD,
@@ -701,7 +701,7 @@ module I2C_MenuController(
 							// Set remote RW control to write
 							RemoteRWControl <= 0;
 							// Enable the Spartan 3E Slave controller
-							EnableController <= 1;
+							Controller_Enable <= 1;
 							// Update display value
 							displayOption <= MENU_STATUS_WRITING;
 							// Refresh display
@@ -726,7 +726,7 @@ module I2C_MenuController(
 							// Set remote RW control to write
 							RemoteRWControl <= 1;
 							// Enable the Spartan 3E Slave controller
-							EnableController <= 1;
+							Controller_Enable <= 1;
 							// Update display value
 							displayOption <= MENU_STATUS_WRITING;
 							// Refresh display

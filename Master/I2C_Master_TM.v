@@ -11,8 +11,8 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_TM(
-	output [3:0] dataout,
-	output [2:0] control,
+	output [3:0]dataout,
+	output [2:0]control,
 	input btn_west,				//
 	input btn_east,
 	input btn_north,
@@ -54,7 +54,7 @@ module I2C_Master_TM(
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
 	// controller
-	wire EnableController;
+	wire Controller_Enable;
 	wire Controller_Done;
 	wire [6:0]SlaveAddr;
 	wire RemoteRWControl;
@@ -129,7 +129,7 @@ module I2C_Master_TM(
 		.Master_SlaveRegAddr(Master_SlaveRegAddr),
 		.Master_DataWriteReg(Master_DataWriteReg),
 		.Controller_Done(Controller_Done),
-		.Controller_Enable(enableControllers[0]),
+		.Controller_Enable(Controller_Enable),
 		.Menu_SlaveAddr(SlaveAddr),
 		.Menu_RWControl(RemoteRWControl),
 		.RAM_RDOUT(LocalRAM_DOUT),
@@ -146,17 +146,14 @@ module I2C_Master_TM(
 		.LCD_DIN(LCD_DIN),
 		.LCD_W(LCD_W),
 		.RemoteRWControl(RemoteRWControl),
-		.enableCursor(enableCursor),
-		.cursorLeft(cursorLeft),
-		.cursorRight(cursorRight),
-		.editAddress(editAddress),
-		.enableControllers(enableControllers),
+		.Controller_Enable(Controller_Enable),
 		.MenuRAM_Select(MenuRAM_Select),
 		.MultiRAM_SEL(MultiRAM_SEL),
 		.MultiRAM_ADD(MultiRAM_ADD),
 		.MultiRAM_DIN(MultiRAM_DIN),
 		.MultiRAM_W(MultiRAM_W),
 		.MultiRAM_Clear(MultiRAM_Clear),
+		.I2C_Mode(I2C_Mode),
 		.SlaveAddr(SlaveAddr),
 		.MultiRAM_DOUT(MultiRAM_DOUT),
 		.Controller_Done(Controller_Done),

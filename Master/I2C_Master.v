@@ -23,7 +23,7 @@ module I2C_Master(
 	inout scl,
 	inout sda,
 	input clk,
-	input reset,
+	input reset
 	);
 
 	wire [9:0] count;
@@ -131,7 +131,7 @@ module I2C_Master(
 								end
 							end //End WAITING
 				START:	begin : Initiate_Start_Sequence
-								/*// If we are in read bit segment pull Serial Data down to
+								// If we are in read bit segment pull Serial Data down to
 								// initiate START signal
 								if (rbit)
 									sda_int <= 0;
@@ -146,8 +146,7 @@ module I2C_Master(
 										// Move on to Data Address state
 										currentState <= D_ADD;
 									end
-								end*/
-								sda_int <= 0;
+								end
 							end // End START
 				D_ADD:	begin : Send_Device_Address
 								if (wbit) begin

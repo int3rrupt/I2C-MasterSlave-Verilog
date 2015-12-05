@@ -1,13 +1,26 @@
 `timescale 1ns / 1ps
 
-//////////////////////////////////////////////////////////////////////////////////
-// Engineer:        Adrian Reyes
-// Module Name:     I2C_LCD_TempSensor
-// Project Name:    I2C
-// Target Devices:  SPARTAN 3E
-// Description:     I2C_LCD_TempSensor Test Fixture
-// Dependencies:    I2C_LCD_TempSensor
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer:
+//
+// Create Date:   22:48:44 11/11/2015
+// Design Name:   I2C_Slave_TM
+// Module Name:   C:/Users/Adrian/Dropbox/Cal Poly/ECE 431L/Source/I2C_Slave-LCD_Buttons_Switches/I2C_Slave_TM_TF.v
+// Project Name:  I2C_Slave-LCD_Buttons_Switches
+// Target Device:  
+// Tool versions:  
+// Description: 
+//
+// Verilog Test Fixture created by ISE for module: I2C_Slave_TM
+//
+// Dependencies:
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+////////////////////////////////////////////////////////////////////////////////
 
 module I2C_Master_TM_TF;
 
@@ -30,7 +43,7 @@ module I2C_Master_TM_TF;
 	wire sda;
 
 	// Instantiate the Unit Under Test (UUT)
-	I2C_Master_TM uut (
+	I2C_Master_TM uut_master (
 		.dataout(dataout),
 		.control(control),
 		.btn_west(btn_west),
@@ -44,7 +57,7 @@ module I2C_Master_TM_TF;
 		.clk(clk),
 		.reset(reset)
 	);
-	
+
 	initial begin
 		// Initialize Inputs
 		rotary_a = 0;
@@ -65,51 +78,67 @@ module I2C_Master_TM_TF;
 
 		#7001000;
 
-		// Add stimulus here
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
+		// Left Rotate
+		#1500; rotary_a = 1;
+		#20; rotary_b = 1;
 		#20; rotary_a = 0;
+		#20; rotary_b = 0;
 		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		// Clear Localm RAM
-		#1500;
-		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
-		// Are you sure
 		#1500;
 		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
 		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		
-		#1500; rotary_b = 1;
-		#20; rotary_a = 1;
-		#20; rotary_b = 0;
-		#20; rotary_a = 0;
-		// I2C Actions
 		#1500;
 		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
-		// Write to Remote
+		
+		#150000000;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
+		#1500;
+		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
+		
+		#1500; rotary_b = 1;
+		#20; rotary_a = 1;
+		#20; rotary_b = 0;
+		#20; rotary_a = 0;
+		
 		#1500;
 		rotary_center = 1; #7001000; rotary_center = 0; #7001000;
 		
@@ -153,3 +182,4 @@ module I2C_Master_TM_TF;
 	always clk = #10 ~clk;
 	
 endmodule
+
