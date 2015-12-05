@@ -2,28 +2,34 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Engineer:			Adrian Reyes
 // Module Name:		I2C_Master_TM
-// Project Name:		I2C_Master-LCD_TempSensor
+// Project Name:		I2C_LCD_Menu_Master
 // Target Devices:	SPARTAN 3E
 // Description:		I2C Master Top Module
-// Dependencies:		I2C_Master
-//							I2C_Master_Controller
-//							LCDI
-
+// Dependencies:		Debouncer
+//							RotaryEncoder
+//							I2C_Master
+//							I2C_Master_SpartanSlaveController
+//							I2C_MenuController
+//							I2C_RAMController
+//							LCDI_Menu
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_TM(
-	output [3:0]dataout,
-	output [2:0]control,
-	input btn_west,				//
-	input btn_east,
-	input btn_north,
-	input rotary_center,			// Push Button to signal which nibble being written
-	input rotary_a,				// Push Button Address Increment
-	input rotary_b,				// Push Button Address Decrement
-	inout scl,
-	inout sda,
-	input clk,
+	output [3:0]dataout,			// Data out to LCD Controller
+	output [2:0]control,			// Control to LCD Controller
+	input btn_west,				// Character column index decrement
+	input btn_east,				// Character column index increment
+	input btn_north,				// Menu button
+	input rotary_center,			// Button for selecting menu options
+	input rotary_a,				// Button for rotary encoding
+	input rotary_b,				// Button for rotary encoding
+	inout scl,						// Serial clock
+	inout sda,						// Serial data
+	input clk,						// I2C driving clock
 	input reset
 	);
+
+	// I2C Mode Parameters
+	//parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
 
 	// Buttons
 	wire charColumnLeftBtn;
@@ -53,7 +59,7 @@ module I2C_Master_TM(
 	wire MultiRAM_Clear;
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
-	// controller
+	// Controller
 	wire Controller_Enable;
 	wire Controller_Done;
 	wire [6:0]SlaveAddr;
@@ -182,26 +188,6 @@ module I2C_Master_TM(
 		.LocalRAM_RADD(RAM_ADD),
 		.clk(clk)
 		);
-
-
-
-//	I2C_Master_Controller controller (
-//		.clk(clk),
-//		.reset(reset),
-//		.W(W),
-//		.WADD(WADD),
-//		.DIN(DIN),
-//		.go(go),
-//		.done(done),
-//		.ready(ready),
-//		.rw(rw),
-//		.N_Byte(N_Byte),
-//		.dev_add(dev_add),
-//		.dwr_DataWriteReg(dwr_DataWriteReg),
-//		.R_Pointer(R_Pointer),
-//		.drd_lcdData(drd_lcdData),
-//		.ack_e(ack_e)
-//		);
 
 	LCDI_Menu lcdi(
 		.dataout(dataout),

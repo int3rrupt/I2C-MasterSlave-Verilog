@@ -8,14 +8,13 @@
 // Dependencies:
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Slave(
-	output reg [7:0]RAM_Addr,
-	output reg [7:0]RemoteRAM_DIN,	// Data Register (Received Data Only?)
-	output reg RemoteRAM_W,
-	input Slave_Enable,
-	input [7:0]LocalRAM_DOUT,
-	inout scl,
-	inout sda,
-	input clk,
+	output reg [7:0]RAM_Addr,			// Register address (used for read and write)
+	output reg [7:0]RemoteRAM_DIN,	// Received Data (slave write operation)
+	output reg RemoteRAM_W,				// Slave write bit
+	input [7:0]LocalRAM_DOUT,			// Local RAM data (slave read operation)
+	inout scl,								// Serial clock
+	inout sda,								// Serial data
+	input clk,								// I2C driving clock
 	input reset
 	);
 
@@ -66,7 +65,7 @@ module I2C_Slave(
 	assign start = dne && fscl;
 
 	always@(posedge clk) begin
-		if (reset || !Slave_Enable) begin
+		if (reset) begin
 			currentState <= 1;
 		end
 		else begin
@@ -163,7 +162,7 @@ module I2C_Slave(
 								// Send Acknowledgement by pulling sda down
 								sda_int <= 0;
 								// Continue
-								currentState <= 7;
+								currentState <= 8;
 							end
 						end
 				7:		begin : Determine_Read_or_Write
@@ -187,9 +186,9 @@ module I2C_Slave(
 						end
 				8:		begin : Write_Operation
 							// If Stop sequence encountered
-							if (stop)
+							if (start)
 								// Start over and wait for Start sequence
-								currentState <= 1;
+								currentState <= 12;
 							// Else Stop sequence not encountered
 							else begin
 								// If Number of bits remaining is zero
