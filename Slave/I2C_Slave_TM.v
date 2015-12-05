@@ -29,9 +29,9 @@ module I2C_Slave_TM(
 	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
 
 	// I2C Mode
-	wire I2C_MODE;
+	reg I2C_MODE = I2C_MODE_MASTER;
 	// Slave Address
-	wire [6:0]SlaveAddr;
+	//wire [6:0]SlaveAddr;
 
 	// Buttons
 	wire charColumnLeftBtn;
@@ -45,15 +45,9 @@ module I2C_Slave_TM(
 	wire [4:0]LCD_WADD;
 	wire [7:0]LCD_DIN;
 	wire LCD_W;
-	wire enableCursor;
-	wire cursorLeft;
-	wire cursorRight;
-	wire editAddress;
 	// RAM
-	wire [7:0]RemoteLocalRAM_ADD;
-	wire [7:0]MultiRAM_DOUT;
-	wire [7:0]LocalRAM_DOUT;
 	wire [4:0]MenuRAM_Select;
+	wire [7:0]MultiRAM_DOUT;
 	wire [1:0]MultiRAM_SEL;
 	wire [4:0]MultiRAM_ADD;
 	wire [7:0]MultiRAM_DIN;
@@ -61,6 +55,8 @@ module I2C_Slave_TM(
 	wire MultiRAM_Clear;
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
+	wire [7:0]LocalRAM_DOUT;
+	wire [7:0]RemoteLocalRAM_ADD;
 	// I2C Controllers
 	wire RemoteRWControl;
 	wire [1:0]enableControllers;

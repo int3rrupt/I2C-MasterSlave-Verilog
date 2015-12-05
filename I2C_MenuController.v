@@ -11,23 +11,19 @@
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_MenuController(
 	// LCDI Outputs
-	output [4:0]LCD_WADD,			// LCD Word Address
+	output [4:0]LCD_WADD,			// LCD Write Address
 	output [7:0]LCD_DIN,				// LCD Data In
 	output LCD_W,						// LCD Write
 	output reg RemoteRWControl,	// RW Control for remote
-	output enableCursor,
-	output reg cursorLeft,
-	output reg cursorRight,
-	output [7:0]editAddress,
-	output reg [1:0]enableControllers,// Enable controller bits
+	output reg EnableController,	// Enable controller bits
 	output reg [4:0]MenuRAM_Select,
 	output reg [1:0]MultiRAM_SEL,
 	output reg [4:0]MultiRAM_ADD,
 	output reg [7:0]MultiRAM_DIN,
 	output MultiRAM_W,
 	output MultiRAM_Clear,
-	output reg [6:0]SlaveAddr,
 	output reg I2C_Mode,
+	output reg [6:0]SlaveAddr,
 	input [7:0]MultiRAM_DOUT,
 	input Controller_Done,
 	input rotary_event,				// Flag indicating Rotary Button rotation
@@ -133,7 +129,7 @@ module I2C_MenuController(
 		currentCharPos = 0;
 		currentCharColumn = 4'b0100;
 		currentCharRow = 4'b0001;
-		enableControllers = 2'b00;
+		Controller_Enable = 0;
 	end
 
 	////////////////////////////////// ASSIGN ///////////////////////////////////
@@ -147,8 +143,6 @@ module I2C_MenuController(
 	// Continuously assign MultiRAM_W
 	assign MultiRAM_W = (subMode == SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL) && ramWriteReady;
 	assign MultiRAM_Clear = subMode == SUBMODE_CLEAR_LOCAL_RAM;
-	// Continuously assign cursor enable
-	assign enableCursor = subMode == SUBMODE_MODIFY_LOCAL_RAM_POSITION_SEL;
 
 	////////////////////////////////// ALWAYS ///////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -547,17 +541,11 @@ module I2C_MenuController(
 								if (rotary_left) begin
 									// Increment current character position
 									currentCharPos <= currentCharPos + 1;
-									cursorRight <= 1;
 								end
 								// Else rotated right
 								else begin
 									currentCharPos <= currentCharPos - 1;
-									cursorLeft <= 1;
 								end
-							end
-							else begin
-								cursorRight <= 0;
-								cursorLeft <= 0;
 							end
 						end
 				STATE_MODIFY_LOCAL_RAM_CHAR_SEL:
@@ -713,7 +701,7 @@ module I2C_MenuController(
 							// Set remote RW control to write
 							RemoteRWControl <= 0;
 							// Enable the Spartan 3E Slave controller
-							enableControllers <= ENABLE_CONTROLLER_SPARTAN_SLAVE;
+							EnableController <= 1;
 							// Update display value
 							displayOption <= MENU_STATUS_WRITING;
 							// Refresh display
@@ -738,7 +726,7 @@ module I2C_MenuController(
 							// Set remote RW control to write
 							RemoteRWControl <= 1;
 							// Enable the Spartan 3E Slave controller
-							enableControllers <= ENABLE_CONTROLLER_SPARTAN_SLAVE;
+							EnableController <= 1;
 							// Update display value
 							displayOption <= MENU_STATUS_WRITING;
 							// Refresh display
