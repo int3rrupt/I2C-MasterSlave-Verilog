@@ -42,7 +42,8 @@ module I2C_RAMController(
 		MENU_TITLE_STATUS =					14,
 		MENU_STATUS_WRITING =				15,
 		MENU_STATUS_ACTION_COMPLETE =		16,
-		MENU_OPTION_SWITCH_I2C_MODE =		17;
+		MENU_STATUS_READING =				17,
+		MENU_OPTION_SWITCH_I2C_MODE = 	18;
 	// Menu RAM select parameters
 	parameter RAM_SEL_MENU = 0, RAM_SEL_REMOTE = 1, RAM_SEL_LOCAL = 2;
 	// Characters
@@ -65,7 +66,7 @@ module I2C_RAMController(
 		CHAR_SPACE = 8'h20, CHAR_2 = 8'h32, CHAR_QUESTION = 8'h3F,
 		CHAR_Period = 8'h2E;
 
-	reg [7:0]menuROM[0:17][0:15];					// 16x8x11 Menu ROM
+	reg [7:0]menuROM[0:18][0:15];					// 16x8x11 Menu ROM
 	reg [7:0]remoteRAM[0:31];
 	reg [7:0]localRAM[0:31];
 
@@ -75,7 +76,7 @@ module I2C_RAMController(
 	initial begin
 		// ************************** MENU ROM **************************
 		// Initialize RAM with spaces
-		for (i = 0; i < 18; i = i + 1) begin
+		for (i = 0; i < 19; i = i + 1) begin
 			for (j = 0; j < 16; j = j + 1) begin
 				menuROM[i][j] = CHAR_SPACE;	// Space
 			end
@@ -281,20 +282,31 @@ module I2C_RAMController(
 		menuROM[16][12] = CHAR_e;	// e
 		menuROM[16][13] = CHAR_t;	// t
 		menuROM[16][14] = CHAR_e;	// e
+		// Reading
+		menuROM[17][0] = CHAR_R;	// R
+		menuROM[17][1] = CHAR_e;	// e
+		menuROM[17][2] = CHAR_a;	// a
+		menuROM[17][3] = CHAR_d;	// d
+		menuROM[17][4] = CHAR_i;	// i
+		menuROM[17][5] = CHAR_n;	// n
+		menuROM[17][6] = CHAR_g;	// g
+		menuROM[17][7] = CHAR_Period;	// .
+		menuROM[17][8] = CHAR_Period;	// .
+		menuROM[17][9] = CHAR_Period;	// .
 		// Switch I2C Mode
-		menuROM[17][0] = CHAR_S;	// S
-		menuROM[17][1] = CHAR_w;	// w
-		menuROM[17][2] = CHAR_i;	// i
-		menuROM[17][3] = CHAR_t;	// t
-		menuROM[17][4] = CHAR_c;	// c
-		menuROM[17][5] = CHAR_h;	// h
-		menuROM[17][7] = CHAR_I;	// I
-		menuROM[17][8] = CHAR_2;	// 2
-		menuROM[17][9] = CHAR_C;	// C
-		menuROM[17][11] = CHAR_M;	// M
-		menuROM[17][12] = CHAR_o;	// o
-		menuROM[17][13] = CHAR_d;	// d
-		menuROM[17][14] = CHAR_e;	// e
+		menuROM[18][0] = CHAR_S;	// S
+		menuROM[18][1] = CHAR_w;	// w
+		menuROM[18][2] = CHAR_i;	// i
+		menuROM[18][3] = CHAR_t;	// t
+		menuROM[18][4] = CHAR_c;	// c
+		menuROM[18][5] = CHAR_h;	// h
+		menuROM[18][7] = CHAR_I;	// I
+		menuROM[18][8] = CHAR_2;	// 2
+		menuROM[18][9] = CHAR_C;	// C
+		menuROM[18][11] = CHAR_M;	// M
+		menuROM[18][12] = CHAR_o;	// o
+		menuROM[18][13] = CHAR_d;	// d
+		menuROM[18][14] = CHAR_e;	// e
 	end
 
 	// RAM read

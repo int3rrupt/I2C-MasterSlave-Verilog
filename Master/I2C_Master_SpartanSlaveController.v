@@ -39,7 +39,6 @@ module I2C_Master_SpartanSlaveController(
 	parameter STATE_SETUP_INITIAL = 0, STATE_ASSERT_GO = 1, STATE_NEXT_BYTE = 2,
 		STATE_SETUP_NEXT_BYTE = 3, STATE_STOP = 4;
 
-	reg mode;
 	reg [2:0]state;
 	reg menuRWControlPrev;
 	reg menuRWControlEvent;
@@ -58,7 +57,7 @@ module I2C_Master_SpartanSlaveController(
 	// Put outside the always
 	assign Master_Go = (state == STATE_ASSERT_GO);
 
-	assign RemoteRAM_W = mode == MODE_SLAVE_READ && state == STATE_SETUP_NEXT_BYTE;
+	assign RemoteRAM_W = Menu_RWControl == MODE_SLAVE_READ && state == STATE_SETUP_NEXT_BYTE;
 
 	// Menu RW Control event watcher
 	always@(posedge clk) begin
@@ -70,16 +69,13 @@ module I2C_Master_SpartanSlaveController(
 	end
 
 	always@(posedge clk) begin
-		if (reset) begin
+		if (reset || !Controller_Enable) begin
 			// If resetting back to state zero
 			state <= 0;
 		end
 		else begin
-			if (Controller_Enable) begin
 				// If change to rw from menu controller
 				if (menuRWControlEvent) begin
-					// Change modes
-					//mode <= Menu_RWControl;
 					// Reset state
 					state <= 0;
 					// Send Stop signal to master
@@ -142,7 +138,6 @@ module I2C_Master_SpartanSlaveController(
 								end
 					endcase
 				end
-			end // End If Enabled
 		end // End Else NOT reset
 	end
 
