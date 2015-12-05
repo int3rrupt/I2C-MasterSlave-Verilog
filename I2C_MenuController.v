@@ -496,6 +496,8 @@ module I2C_MenuController(
 										Controller_Enable <= 0;
 										// Change modes
 										mode <= MODE_DISPLAY_REMOTE;
+										// Update display option
+										displayOption <= MENU_OPTION_DISPLAY_REMOTE;
 									end
 								end
 								else
