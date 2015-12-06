@@ -27,9 +27,11 @@ module I2C_Master_TM(
 	input clk,						// I2C driving clock
 	input reset
 	);
-
+	
 	// I2C Mode Parameters
-	//parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
+	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
+	
+	reg I2C_Mode = I2C_MODE_MASTER;
 
 	// Buttons
 	wire charColumnLeftBtn;

@@ -28,7 +28,9 @@ module I2C_Slave_TM(
 	);
 
 	// I2C Mode Parameters
-	//parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
+	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
+	
+	reg I2C_Mode = I2C_MODE_SLAVE;
 
 	// Buttons
 	wire charColumnLeftBtn;
@@ -100,19 +102,15 @@ module I2C_Slave_TM(
 		.LCD_DIN(LCD_DIN),
 		.LCD_W(LCD_W),
 		.RemoteRWControl(RemoteRWControl),
-		.enableCursor(enableCursor),
-		.cursorLeft(cursorLeft),
-		.cursorRight(cursorRight),
-		.editAddress(editAddress),
-		.enableControllers(enableControllers),
+		.Controller_Enable(Controller_Enable),
 		.MenuRAM_Select(MenuRAM_Select),				//
 		.MultiRAM_SEL(MultiRAM_SEL),					// Multi RAM select
 		.MultiRAM_ADD(MultiRAM_ADD),					// Multi RAM address (read and write)
 		.MultiRAM_DIN(MultiRAM_DIN),					// Multi RAM data in
 		.MultiRAM_W(MultiRAM_W),						// Multi RAM write bit
 		.MultiRAM_Clear(MultiRAM_Clear),				// Multi RAM clear control bit
+		.I2C_Mode(I2C_Mode),								// NOT USED - FUTURE USE
 		.SlaveAddr(SlaveAddr),							// NOT USED - FUTURE USE
-		.I2C_Mode(I2C_MODE),								// NOT USED - FUTURE USE
 		.MultiRAM_DOUT(MultiRAM_DOUT),				// Multi RAM data out
 		.Controller_Done(Controller_Done),			// NOT USED - MASTER USE ONLY
 		.rotary_event(rotary_event),					// Rotary rotate event indicator
@@ -134,10 +132,10 @@ module I2C_Slave_TM(
 		.MultiRAM_DIN(MultiRAM_DIN),
 		.MultiRAM_W(MultiRAM_W),
 		.MultiRAM_Clear(MultiRAM_Clear),
-		.RemoteRAM_WADD(RemoteLocalRAM_ADD),
+		.RemoteRAM_WADD(RAM_ADD),
 		.RemoteRAM_DIN(RemoteRAM_DIN),
 		.RemoteRAM_W(RemoteRAM_W),
-		.LocalRAM_RADD(RemoteLocalRAM_ADD),
+		.LocalRAM_RADD(RAM_ADD),
 		.clk(clk)
 		);
 

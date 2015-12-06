@@ -22,7 +22,7 @@ module I2C_MenuController(
 	output reg [7:0]MultiRAM_DIN,
 	output MultiRAM_W,
 	output MultiRAM_Clear,
-	output reg I2C_Mode,
+	input I2C_Mode,
 	output reg [6:0]SlaveAddr,
 	input [7:0]MultiRAM_DOUT,
 	input Controller_Done,
@@ -123,7 +123,7 @@ module I2C_MenuController(
 													// to be written to the selected RAM
 
 	initial begin
-		I2C_Mode = I2C_MODE_MASTER;
+		//I2C_Mode = I2C_MODE_SLAVE;
 		mode= MODE_MENU;
 		SlaveAddr = 7'b1100111;
 		state = STATE_REFRESH_LCD_MENU_TITLE;
@@ -764,7 +764,7 @@ module I2C_MenuController(
 						end
 				STATE_SWITCH_I2C_MODE:
 						begin
-							I2C_Mode <= !I2C_Mode;
+							//I2C_Mode <= !I2C_Mode;
 							// Set mode
 							mode <= MODE_MENU;
 							// Reset to home position

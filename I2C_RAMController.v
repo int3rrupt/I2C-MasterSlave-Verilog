@@ -81,6 +81,15 @@ module I2C_RAMController(
 				menuROM[i][j] = CHAR_SPACE;	// Space
 			end
 		end
+		
+		// FOR DEBUGGING ONLY
+		for (i = 0; i < 32; i = i + 1) begin
+			localRAM[i] = i;
+		end
+		
+		
+		
+		
 		// MAIN MENU MASTER
 		menuROM[0][0] = CHAR_M;		// M
 		menuROM[0][1] = CHAR_A;		// A
