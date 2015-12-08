@@ -8,14 +8,13 @@
 // Dependencies:
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Slave(
-	output reg [7:0]RAM_Addr,
-	output reg [7:0]RemoteRAM_DIN,	// Data Register (Received Data Only?)
-	output reg RemoteRAM_W,
-	input Slave_Enable,
-	input [7:0]LocalRAM_DOUT,
-	inout scl,
-	inout sda,
-	input clk,
+	output reg [7:0]RAM_Addr,			// Register address (used for read and write)
+	output reg [7:0]RemoteRAM_DIN,	// Received Data (slave write operation)
+	output reg RemoteRAM_W,				// Slave write bit
+	input [7:0]LocalRAM_DOUT,			// Local RAM data (slave read operation)
+	inout scl,								// Serial clock
+	inout sda,								// Serial data
+	input clk,								// I2C driving clock
 	input reset
 	);
 
@@ -66,7 +65,7 @@ module I2C_Slave(
 	assign start = dne && fscl;
 
 	always@(posedge clk) begin
-		if (reset || !Slave_Enable) begin
+		if (reset) begin
 			currentState <= 1;
 		end
 		else begin
@@ -187,17 +186,18 @@ module I2C_Slave(
 						end
 				8:		begin : Write_Operation
 							// If Stop sequence encountered
-							if (stop)
+							if (start) begin
+								// Reset bit count
+								Nb <= 8;
 								// Start over and wait for Start sequence
-								currentState <= 1;
+								currentState <= 12;
+							end
 							// Else Stop sequence not encountered
 							else begin
 								// If Number of bits remaining is zero
 								if (Nb == 0) begin
 									// Assert write
 									RemoteRAM_W <= 1;
-									// Increment Register Address reg
-									RAM_Addr <= RAM_Addr + 1;
 									// Continue
 									currentState <= 9;
 								end
@@ -229,6 +229,8 @@ module I2C_Slave(
 								sda_int <= 1;
 								// Set the number of bits to be read to 8
 								Nb <= 8;
+								// Increment Register Address reg
+								RAM_Addr <= RAM_Addr + 1;
 								// Continue to read or wait for Stop sequence
 								currentState <= 8;
 							end
@@ -265,8 +267,6 @@ module I2C_Slave(
 										TXr <= LocalRAM_DOUT;
 										// Set the number of bits to be transmitted to 8
 										Nb <= 8;
-										// Increment Register Address
-										RAM_Addr <= RAM_Addr + 1;
 										// Continue
 										currentState <= 13;
 									end
@@ -291,19 +291,33 @@ module I2C_Slave(
 								end
 							end
 						end
-				13:	begin : Wait_For_Negative_Edge_To_Transmit
+				13:	begin : Send_Second_Address_Ack
 							// Wait for Serial Clock negative edge
-							if (cne)
+							if (cne) begin
+								// Send Acknowledgement by pulling sda down
+								sda_int <= 0;
 								// Continue
 								currentState <= 14;
+							end
 						end
-				14:	begin : Transmit_Most_Significant_Bit
+				14:	begin : Wait_For_Negative_Edge_To_Transmit
+							// Wait for Serial Clock negative edge
+							if (cne) begin
+								// Release sda bus
+								sda_int <= 1;
+								// Set the number of bits to be read to 8
+								Nb <= 8;
+								// Continue
+								currentState <= 15;
+							end
+						end
+				15:	begin : Transmit_Most_Significant_Bit
 							// Transmit most significant bit
 							sda_int <= TXr[7];
 							// Continue
-							currentState <= 15;
+							currentState <= 16;
 						end
-				15:	begin : Left_Shift_Transmit_Reg
+				16:	begin : Left_Shift_Transmit_Reg
 							// If Stop sequence encountered
 							if (stop)
 								// Start over and wait for Start sequence
@@ -312,10 +326,12 @@ module I2C_Slave(
 							else begin
 								// If Number of bits remaining is zero
 								if (Nb == 0) begin
+									// Increment RAM address in case master continues reading
+									RAM_Addr <= RAM_Addr + 1;
 									// Release sda bus
 									sda_int <= 1;
 									// Continue
-									currentState <= 16;
+									currentState <= 17;
 								end
 								// Keep transmitting bits
 								else begin
@@ -327,12 +343,12 @@ module I2C_Slave(
 										Nb <= Nb - 1;
 										// Go back and transmit most significant bit now
 										// that we've left shifted
-										currentState <= 14;
+										currentState <= 15;
 									end
 								end
 							end
 						end
-				16:	begin : Determine_Continue_Reading
+				17:	begin : Determine_Continue_Reading
 							// Wait for Serial Clock positive edge
 							if (cpe) begin
 								// If Master is done reading
@@ -347,10 +363,10 @@ module I2C_Slave(
 									// Set the number of bits to be transmitted to 8
 									Nb <= 8;
 									// Increment Register Address
-									RAM_Addr <= RAM_Addr + 1;
+									//RAM_Addr <= RAM_Addr + 1;
 									// Go back and wait for negative edge of Serial Clock
 									// to begin transmitting
-									currentState <= 13;
+									currentState <= 14;
 								end
 							end
 						end

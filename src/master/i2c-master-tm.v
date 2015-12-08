@@ -2,28 +2,36 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Engineer:			Adrian Reyes
 // Module Name:		I2C_Master_TM
-// Project Name:		I2C_Master-LCD_TempSensor
+// Project Name:		I2C_LCD_Menu_Master
 // Target Devices:	SPARTAN 3E
 // Description:		I2C Master Top Module
-// Dependencies:		I2C_Master
-//							I2C_Master_Controller
-//							LCDI
-
+// Dependencies:		Debouncer
+//							RotaryEncoder
+//							I2C_Master
+//							I2C_Master_SpartanSlaveController
+//							I2C_MenuController
+//							I2C_RAMController
+//							LCDI_Menu
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_Master_TM(
-	output [3:0] dataout,
-	output [2:0] control,
-	input btn_west,				//
-	input btn_east,
-	input btn_north,
-	input rotary_center,			// Push Button to signal which nibble being written
-	input rotary_a,				// Push Button Address Increment
-	input rotary_b,				// Push Button Address Decrement
-	inout scl,
-	inout sda,
-	input clk,
+	output [3:0]dataout,			// Data out to LCD Controller
+	output [2:0]control,			// Control to LCD Controller
+	input btn_west,				// Character column index decrement
+	input btn_east,				// Character column index increment
+	input btn_north,				// Menu button
+	input rotary_center,			// Button for selecting menu options
+	input rotary_a,				// Button for rotary encoding
+	input rotary_b,				// Button for rotary encoding
+	inout scl,						// Serial clock
+	inout sda,						// Serial data
+	input clk,						// I2C driving clock
 	input reset
 	);
+	
+	// I2C Mode Parameters
+	parameter I2C_MODE_MASTER = 0, I2C_MODE_SLAVE = 1;
+	
+	reg I2C_Mode = I2C_MODE_MASTER;
 
 	// Buttons
 	wire charColumnLeftBtn;
@@ -53,25 +61,23 @@ module I2C_Master_TM(
 	wire MultiRAM_Clear;
 	wire [7:0]RemoteRAM_DIN;
 	wire RemoteRAM_W;
-	// controller
+	// Controller
+	wire Controller_Enable;
 	wire Controller_Done;
-	wire [1:0]enableControllers;
 	wire [6:0]SlaveAddr;
 	wire RemoteRWControl;
 	// Master
-	wire Master_Go;
-	wire Master_RW;
-	wire [5:0]Master_NumOfBytes;
-	wire [6:0]Master_SlaveAddr;
-	wire [7:0]Master_DataWriteReg;
-	wire [7:0]Master_SlaveRegAddr;
-	wire Master_Stop;
 	wire Master_Done;
 	wire Master_Ready;
 	wire Master_ACK;
 	wire [7:0]Master_ReadData;
-
-
+	wire Master_Go;
+	wire Master_Stop;
+	wire Master_RW;
+	wire [5:0]Master_NumOfBytes;
+	wire [6:0]Master_SlaveAddr;
+	wire [7:0]Master_SlaveRegAddr;
+	wire [7:0]Master_DataWriteReg;
 
 	Debouncer debouncerRotaryCenter(
 		.E(rotaryBtn),
@@ -102,19 +108,43 @@ module I2C_Master_TM(
 		);
 
 	I2C_Master master (
-		.go(Master_Go),
 		.done(Master_Done),
 		.ready(Master_Ready),
+		.ack_e(Master_ACK),
+		.drd_lcdData(Master_ReadData),
+		.go(Master_Go),
+		.stop(Master_Stop),
 		.rw(Master_RW),
 		.N_Byte(Master_NumOfBytes),
 		.dev_add(Master_SlaveAddr),
 		.dwr_DataWriteReg(Master_DataWriteReg),
 		.R_Pointer(Master_SlaveRegAddr),
-		.drd_lcdData(Master_ReadData),
-		.ack_e(Master_ACK),
-		.stop(Master_Stop),
 		.scl(scl),
 		.sda(sda),
+		.clk(clk),
+		.reset(reset)
+		);
+
+	I2C_Master_SpartanSlaveController spartanSlaveController(
+		.RAM_ADD(RAM_ADD),
+		.RemoteRAM_DIN(RemoteRAM_DIN),
+		.RemoteRAM_W(RemoteRAM_W),
+		.Master_Go(Master_Go),
+		.Master_Stop(Master_Stop),
+		.Master_RW(Master_RW),
+		.Master_NumOfBytes(Master_NumOfBytes),
+		.Master_SlaveAddr(Master_SlaveAddr),
+		.Master_SlaveRegAddr(Master_SlaveRegAddr),
+		.Master_DataWriteReg(Master_DataWriteReg),
+		.Controller_Done(Controller_Done),
+		.Controller_Enable(Controller_Enable),
+		.Menu_SlaveAddr(SlaveAddr),
+		.Menu_RWControl(RemoteRWControl),
+		.RAM_RDOUT(LocalRAM_DOUT),
+		.Master_Done(Master_Done),
+		.Master_Ready(Master_Ready),
+		.Master_ACK(Master_ACK),
+		.Master_ReadData(Master_ReadData),
 		.clk(clk),
 		.reset(reset)
 		);
@@ -124,17 +154,14 @@ module I2C_Master_TM(
 		.LCD_DIN(LCD_DIN),
 		.LCD_W(LCD_W),
 		.RemoteRWControl(RemoteRWControl),
-		.enableCursor(enableCursor),
-		.cursorLeft(cursorLeft),
-		.cursorRight(cursorRight),
-		.editAddress(editAddress),
-		.enableControllers(enableControllers),
+		.Controller_Enable(Controller_Enable),
 		.MenuRAM_Select(MenuRAM_Select),
 		.MultiRAM_SEL(MultiRAM_SEL),
 		.MultiRAM_ADD(MultiRAM_ADD),
 		.MultiRAM_DIN(MultiRAM_DIN),
 		.MultiRAM_W(MultiRAM_W),
 		.MultiRAM_Clear(MultiRAM_Clear),
+		.I2C_Mode(I2C_Mode),
 		.SlaveAddr(SlaveAddr),
 		.MultiRAM_DOUT(MultiRAM_DOUT),
 		.Controller_Done(Controller_Done),
@@ -163,48 +190,6 @@ module I2C_Master_TM(
 		.LocalRAM_RADD(RAM_ADD),
 		.clk(clk)
 		);
-
-	I2C_Master_SpartanSlaveController spartanSlaveController(
-		.RAM_ADD(RAM_ADD),
-		.RAM_DIN(RemoteRAM_DIN),
-		.RAM_W(RemoteRAM_W),
-		.Master_Go(Master_Go),
-		.Master_RW(Master_RW),
-		.Master_NumOfBytes(Master_NumOfBytes),
-		.Master_SlaveAddr(Master_SlaveAddr),
-		.Master_DataWriteReg(Master_DataWriteReg),
-		.Master_SlaveRegAddr(Master_SlaveRegAddr),
-		.Master_Stop(Master_Stop),
-		.Controller_Done(Controller_Done),
-		.Controller_Enable(enableControllers[0]),
-		.Menu_SlaveAddr(SlaveAddr),
-		.Menu_RWControl(RemoteRWControl),
-		.Master_Done(Master_Done),
-		.Master_Ready(Master_Ready),
-		.Master_ACK(Master_ACK),
-		.Master_ReadData(Master_ReadData),
-		.RAM_RDOUT(LocalRAM_DOUT),
-		.clk(clk),
-		.reset(reset)
-		);
-
-//	I2C_Master_Controller controller (
-//		.clk(clk),
-//		.reset(reset),
-//		.W(W),
-//		.WADD(WADD),
-//		.DIN(DIN),
-//		.go(go),
-//		.done(done),
-//		.ready(ready),
-//		.rw(rw),
-//		.N_Byte(N_Byte),
-//		.dev_add(dev_add),
-//		.dwr_DataWriteReg(dwr_DataWriteReg),
-//		.R_Pointer(R_Pointer),
-//		.drd_lcdData(drd_lcdData),
-//		.ack_e(ack_e)
-//		);
 
 	LCDI_Menu lcdi(
 		.dataout(dataout),

@@ -11,23 +11,19 @@
 //////////////////////////////////////////////////////////////////////////////////
 module I2C_MenuController(
 	// LCDI Outputs
-	output [4:0]LCD_WADD,			// LCD Word Address
+	output [4:0]LCD_WADD,			// LCD Write Address
 	output [7:0]LCD_DIN,				// LCD Data In
 	output LCD_W,						// LCD Write
 	output reg RemoteRWControl,	// RW Control for remote
-	output enableCursor,
-	output reg cursorLeft,
-	output reg cursorRight,
-	output [7:0]editAddress,
-	output reg [1:0]enableControllers,// Enable controller bits
+	output reg Controller_Enable,	// Enable controller bits
 	output reg [4:0]MenuRAM_Select,
 	output reg [1:0]MultiRAM_SEL,
 	output reg [4:0]MultiRAM_ADD,
 	output reg [7:0]MultiRAM_DIN,
 	output MultiRAM_W,
 	output MultiRAM_Clear,
+	input I2C_Mode,
 	output reg [6:0]SlaveAddr,
-	output reg I2C_Mode,
 	input [7:0]MultiRAM_DOUT,
 	input Controller_Done,
 	input rotary_event,				// Flag indicating Rotary Button rotation
@@ -57,7 +53,8 @@ module I2C_MenuController(
 		SUBMODE_MODIFY_LOCAL_RAM_DISPLAY = 4, SUBMODE_MODIFY_LOCAL_RAM_POSITION_SEL = 5,
 		SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL = 6, SUBMODE_CLEAR_LOCAL_RAM_CONFIRM = 7,
 		SUBMODE_CLEAR_LOCAL_RAM = 8, SUBMODE_WAIT_FOR_SELECTION = 9,
-		SUBMODE_WRITE_TO_REMOTE_WRITING = 10, SUBMODE_WRITE_TO_REMOTE_WAITING = 11;
+		SUBMODE_WRITE_TO_REMOTE_WRITING = 10, SUBMODE_WRITE_TO_REMOTE_WAITING = 11,
+		SUBMODE_READ_FROM_REMOTE_READING = 12, SUBMODE_READ_FROM_REMOTE_WAITING = 13;
 	// State parameters
 	parameter
 		STATE_REFRESH_LCD_MENU_TITLE =			0,
@@ -99,7 +96,8 @@ module I2C_MenuController(
 		MENU_TITLE_STATUS =					14,
 		MENU_STATUS_WRITING =				15,
 		MENU_STATUS_ACTION_COMPLETE =		16,
-		MENU_OPTION_SWITCH_I2C_MODE = 	17;
+		MENU_STATUS_READING =				17,
+		MENU_OPTION_SWITCH_I2C_MODE = 	18;
 	parameter ENABLE_CONTROLLER_SPARTAN_SLAVE = 1, ENABLE_CONTROLLER_TEMP = 2;
 
 	//////////////////////////////// REGISTERS //////////////////////////////////
@@ -125,7 +123,7 @@ module I2C_MenuController(
 													// to be written to the selected RAM
 
 	initial begin
-		I2C_Mode = I2C_MODE_MASTER;
+		//I2C_Mode = I2C_MODE_SLAVE;
 		mode= MODE_MENU;
 		SlaveAddr = 7'b1100111;
 		state = STATE_REFRESH_LCD_MENU_TITLE;
@@ -133,7 +131,7 @@ module I2C_MenuController(
 		currentCharPos = 0;
 		currentCharColumn = 4'b0100;
 		currentCharRow = 4'b0001;
-		enableControllers = 2'b00;
+		Controller_Enable = 0;
 	end
 
 	////////////////////////////////// ASSIGN ///////////////////////////////////
@@ -147,8 +145,6 @@ module I2C_MenuController(
 	// Continuously assign MultiRAM_W
 	assign MultiRAM_W = (subMode == SUBMODE_MODIFY_LOCAL_RAM_CHAR_SEL) && ramWriteReady;
 	assign MultiRAM_Clear = subMode == SUBMODE_CLEAR_LOCAL_RAM;
-	// Continuously assign cursor enable
-	assign enableCursor = subMode == SUBMODE_MODIFY_LOCAL_RAM_POSITION_SEL;
 
 	////////////////////////////////// ALWAYS ///////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -232,6 +228,8 @@ module I2C_MenuController(
 								MENU_STATUS_WRITING:
 										MenuRAM_Select <= MENU_TITLE_STATUS;
 								MENU_STATUS_ACTION_COMPLETE:
+										MenuRAM_Select <= MENU_TITLE_STATUS;
+								MENU_STATUS_READING:
 										MenuRAM_Select <= MENU_TITLE_STATUS;
 								MENU_OPTION_SWITCH_I2C_MODE:
 										MenuRAM_Select <= MENU_TITLE_I2C_ACTIONS;
@@ -480,8 +478,9 @@ module I2C_MenuController(
 							// Wait for menu button press. RAM was displayed now
 							// waiting to return to menu
 							if (rotaryBtn) state <= STATE_REFRESH_LCD_MENU_TITLE;
+							// Else if mode is reading from remote
 							else begin
-								// Select Master RAM
+								// Select Remote RAM
 								MultiRAM_SEL <= RAM_SEL_REMOTE;
 								// Reset address to first character
 								MultiRAM_ADD <= 0;
@@ -489,9 +488,22 @@ module I2C_MenuController(
 								lcdAddress <= 0;
 								// Set the LCD stop address
 								lcdStopAddress <= 31;
-								// Set mode
-								mode <= MODE_DISPLAY_REMOTE;
-								// Set subMode to Display Master RAM
+								// If reading from remote
+								if (mode == MODE_READ_FROM_REMOTE) begin
+									// Check if controller has sent done signal
+								 	if (Controller_Done) begin
+										// Disable Controller
+										Controller_Enable <= 0;
+										// Change modes
+										mode <= MODE_DISPLAY_REMOTE;
+										// Update display option
+										displayOption <= MENU_OPTION_DISPLAY_REMOTE;
+									end
+								end
+								else
+									// Set mode
+									mode <= MODE_DISPLAY_REMOTE;
+								// Set subMode to Display Remote RAM
 								subMode <= SUBMODE_DISPLAY_REMOTE;
 								// Setup up LCD data to display Master RAM
 								state <= STATE_SETUP_LCD_DATA;
@@ -547,17 +559,11 @@ module I2C_MenuController(
 								if (rotary_left) begin
 									// Increment current character position
 									currentCharPos <= currentCharPos + 1;
-									cursorRight <= 1;
 								end
 								// Else rotated right
 								else begin
 									currentCharPos <= currentCharPos - 1;
-									cursorLeft <= 1;
 								end
-							end
-							else begin
-								cursorRight <= 0;
-								cursorLeft <= 0;
 							end
 						end
 				STATE_MODIFY_LOCAL_RAM_CHAR_SEL:
@@ -651,9 +657,8 @@ module I2C_MenuController(
 													state <= STATE_WAIT_FOR_SELECTION;
 										endcase
 								MODE_DISPLAY_REMOTE:
-										// Keep refreshing display with remote RAM display
-										// contents while waiting for menu button press
-										state <= STATE_DISPLAY_REMOTE;
+										// Wait for menu button press
+										state <= STATE_WAIT_FOR_ROTARY_OR_MENU_PRESS;
 								MODE_DISPLAY_LOCAL:
 										case (subMode)
 											SUBMODE_REFRESH_MENU_TITLE:
@@ -702,6 +707,13 @@ module I2C_MenuController(
 													// Wait for remote write to complete
 													state <= STATE_WRITE_TO_REMOTE_WAIT;
 										endcase
+								MODE_READ_FROM_REMOTE:
+										case (subMode)
+											SUBMODE_DISPLAY_REMOTE:
+													// Keep refreshing display with remote RAM display
+													// contents while waiting for menu button press
+													state <= STATE_DISPLAY_REMOTE;
+										endcase
 							endcase
 						end
 				STATE_WRITE_TO_REMOTE:
@@ -713,7 +725,7 @@ module I2C_MenuController(
 							// Set remote RW control to write
 							RemoteRWControl <= 0;
 							// Enable the Spartan 3E Slave controller
-							enableControllers <= ENABLE_CONTROLLER_SPARTAN_SLAVE;
+							Controller_Enable <= 1;
 							// Update display value
 							displayOption <= MENU_STATUS_WRITING;
 							// Refresh display
@@ -723,9 +735,15 @@ module I2C_MenuController(
 						begin
 							// Set sub mode
 							subMode <= SUBMODE_WRITE_TO_REMOTE_WAITING;
+							// Wait for controller to send done signal
 							if (Controller_Done) begin
+								// Disable controller
+								Controller_Enable <= 0;
+								// Change mode to menu
 								mode <= MODE_MENU;
+								// Display Action Complete
 								displayOption <= MENU_STATUS_ACTION_COMPLETE;
+								// Refresh display
 								state <= STATE_REFRESH_LCD_MENU_TITLE;
 							end
 						end
@@ -734,19 +752,19 @@ module I2C_MenuController(
 							// Set the mode
 							mode <= MODE_READ_FROM_REMOTE;
 							// Set the sub mode
-							subMode <= SUBMODE_WRITE_TO_REMOTE_WRITING;
+							subMode <= SUBMODE_READ_FROM_REMOTE_READING;
 							// Set remote RW control to write
 							RemoteRWControl <= 1;
 							// Enable the Spartan 3E Slave controller
-							enableControllers <= ENABLE_CONTROLLER_SPARTAN_SLAVE;
-							// Update display value
-							displayOption <= MENU_STATUS_WRITING;
-							// Refresh display
-							state <= STATE_REFRESH_LCD_MENU_TITLE;
+							Controller_Enable <= 1;
+							// Update display value for after completion
+							displayOption <= MENU_TITLE_MAIN_MASTER;
+							// Display remote
+							state <= STATE_DISPLAY_REMOTE;
 						end
 				STATE_SWITCH_I2C_MODE:
 						begin
-							I2C_Mode <= !I2C_Mode;
+							//I2C_Mode <= !I2C_Mode;
 							// Set mode
 							mode <= MODE_MENU;
 							// Reset to home position
